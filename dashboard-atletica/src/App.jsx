@@ -15,7 +15,6 @@ const MAPA_NORMALIZACAO = {
   'league of legends': 'League of Legends',
 };
 
-// Ícones e tamanho padrão de atletas titulares por time em cada modalidade
 const REGRAS_MODALIDADES = {
   'Vôlei': { icone: '🏐', tamPadrao: 6 },
   'Futsal': { icone: '⚽', tamPadrao: 5 },
@@ -313,12 +312,10 @@ export default function App() {
   const colWhats = colunas.find(c => c.toLowerCase().includes('whatsapp') || c.toLowerCase().includes('telefone'));
   const colCarimbo = colunas.find(c => c.toLowerCase().includes('carimbo') || c.toLowerCase().includes('data'));
 
-  // Lista de todas as modalidades únicas extraídas da planilha
   const listaModalidadesUnicas = Array.from(
     new Set(Object.values(estatisticas).flatMap(cat => Object.keys(cat.itens)))
   ).sort();
 
-  // CORREÇÃO DO BUG: Busca em TODAS as colunas que possuem esportes/jogos
   const atletasDaModalidade = dados.filter(atleta => {
     return Object.keys(atleta).some(col => {
       const colLower = col.toLowerCase();
@@ -330,14 +327,12 @@ export default function App() {
     });
   });
 
-  // Filtra por curso (se ativado)
   const atletasFiltradosPorCurso = atletasDaModalidade.filter(atleta => {
     if (filtroCursoTime === 'TODOS') return true;
     const cursoAtleta = atleta[colCurso] || '';
     return cursoAtleta.toLowerCase().includes(filtroCursoTime.toLowerCase());
   });
 
-  // Lista de cursos disponíveis na modalidade selecionada
   const listaCursosDisponiveis = Array.from(
     new Set(atletasDaModalidade.map(a => a[colCurso] || 'Outros').filter(Boolean))
   ).sort();
@@ -366,7 +361,6 @@ export default function App() {
     });
   };
 
-  // DISTRIBUIÇÃO INTELIGENTE POR REGRA / RANDOM / CURSO
   const autoDistribuirTimes = (modo = 'random') => {
     const baseAtletas = modo === 'curso' ? atletasFiltradosPorCurso : atletasDaModalidade;
     if (baseAtletas.length === 0) return;
@@ -384,7 +378,6 @@ export default function App() {
     if (modo === 'random') {
       listaProcessar.sort(() => Math.random() - 0.5);
     } else if (modo === 'curso') {
-      // Agrupa prioritariamente por curso
       listaProcessar.sort((a, b) => a.curso.localeCompare(b.curso));
     }
 
@@ -445,7 +438,8 @@ export default function App() {
   };
 
   return (
-    <div style={styles.appContainer}>
+    <div style={styles.appContainer} className="app-container">
+      {/* REGRAS CSS RESPONSIVAS DEDICADAS */}
       <style>{`
         @keyframes moverGlow1 {
           0% { transform: translate(0px, 0px) scale(1); }
@@ -489,36 +483,79 @@ export default function App() {
         .tr-hover:hover {
           background-color: rgba(30, 41, 59, 0.85) !important;
         }
+
+        /* MEDIA QUERIES PARA TELEMÓVEL E TABLET */
+        @media (max-width: 768px) {
+          .app-container {
+            padding: 16px 12px !important;
+          }
+          .header-responsive {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 16px !important;
+          }
+          .nav-tabs-responsive {
+            width: 100% !important;
+            overflow-x: auto !important;
+            white-space: nowrap !important;
+            padding: 6px !important;
+            justify-content: flex-start !important;
+          }
+          .nav-tabs-responsive button {
+            padding: 8px 12px !important;
+            font-size: 12px !important;
+            flex-shrink: 0 !important;
+          }
+          .grid-responsive {
+            grid-template-columns: 1fr !important;
+          }
+          .search-responsive {
+            width: 100% !important;
+          }
+          .table-header-responsive {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+          }
+          .config-panel-responsive {
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+          .config-panel-responsive > div {
+            width: 100% !important;
+            flex: none !important;
+          }
+        }
       `}</style>
 
       <div className="glow-orb-1" />
       <div className="glow-orb-2" />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <header style={styles.header}>
+        <header style={styles.header} className="header-responsive">
           <div>
             <span style={styles.badgeHeader}>A.A.A.F.R.P. • Apresentação de Dados</span>
             <h1 style={styles.title}>Relatório Geral de Atletas & Modalidades</h1>
           </div>
           
-          <div style={styles.navTabs}>
+          <div style={styles.navTabs} className="nav-tabs-responsive">
             <button 
               onClick={() => setAbaAtiva('graficos')} 
               style={abaAtiva === 'graficos' ? styles.tabActive : styles.tabInactive}
             >
-              📊 Apresentação (Gráficos)
+              📊 Apresentação
             </button>
             <button 
               onClick={() => setAbaAtiva('geral')} 
               style={abaAtiva === 'geral' ? styles.tabActive : styles.tabInactive}
             >
-              📋 Resumo por Modalidade
+              📋 Resumo
             </button>
             <button 
               onClick={() => setAbaAtiva('tabela')} 
               style={abaAtiva === 'tabela' ? styles.tabActive : styles.tabInactive}
             >
-              🗃️ Tabela Completa
+              🗃️ Tabela
             </button>
             <button 
               onClick={() => setAbaAtiva('times')} 
@@ -537,7 +574,7 @@ export default function App() {
         {/* ABA 1: GRÁFICOS */}
         {abaAtiva === 'graficos' && (
           <section style={styles.section}>
-            <div style={styles.kpiGrid}>
+            <div style={styles.kpiGrid} className="grid-responsive">
               <div style={styles.kpiCard}>
                 <span style={styles.kpiLabel}>Total de Atletas</span>
                 <div style={styles.kpiValueContainer}>
@@ -570,7 +607,7 @@ export default function App() {
               </div>
             </div>
 
-            <div style={styles.gridGraficos}>
+            <div style={styles.gridGraficos} className="grid-responsive">
               {Object.entries(estatisticas).map(([categoriaNome, dataObj], idx) => {
                 const listaItens = dataObj.itens;
                 const maxQtd = Math.max(...Object.values(listaItens));
@@ -581,7 +618,7 @@ export default function App() {
                     <div style={styles.cardGraficoHeader}>
                       <div>
                         <h3 style={styles.cardGraficoTitle}>{categoriaNome}</h3>
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
                           <span style={styles.badgeRefinado}>{dataObj.atletasUnicos} atletas únicos</span>
                           <span style={styles.badgeBruto}>{totalCategoria} escolhas no total</span>
                         </div>
@@ -604,7 +641,7 @@ export default function App() {
                                   <span style={{ ...styles.barLabel, fontWeight: isLider ? '700' : '500', color: isLider ? '#f8fafc' : '#cbd5e1' }}>
                                     {icone} {itemNome}
                                   </span>
-                                  {isLider && <span style={styles.badgeLider}>👑 1º Lugar</span>}
+                                  {isLider && <span style={styles.badgeLider}>👑 1º</span>}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   <span style={styles.barPercent}>{porcentagemTotal}%</span>
@@ -642,7 +679,7 @@ export default function App() {
               Comparativo detalhado de escolhas por modalidade
             </p>
 
-            <div style={styles.gridCategorias}>
+            <div style={styles.gridCategorias} className="grid-responsive">
               {Object.entries(estatisticas).map(([categoriaNome, dataObj], idx) => {
                 const listaItens = dataObj.itens;
                 const totalCategoria = Object.values(listaItens).reduce((a, b) => a + b, 0);
@@ -691,11 +728,11 @@ export default function App() {
         {/* ABA 3: TABELA COMPLETA */}
         {abaAtiva === 'tabela' && (
           <section style={styles.section}>
-            <div style={styles.tableHeaderContainer}>
+            <div style={styles.tableHeaderContainer} className="table-header-responsive">
               <div>
                 <h2 style={styles.sectionTitle}>Base Geral de Atletas</h2>
                 <p style={styles.sectionSubtitle}>
-                  Clique em qualquer linha para abrir a ficha individual • Exibindo <strong style={{ color: '#ef4444' }}>{dadosFiltrados.length}</strong> de {dados.length}
+                  Clique em qualquer linha para ver a ficha • Exibindo <strong style={{ color: '#ef4444' }}>{dadosFiltrados.length}</strong> de {dados.length}
                 </p>
               </div>
               
@@ -705,6 +742,7 @@ export default function App() {
                 value={filtroTexto}
                 onChange={(e) => setFiltroTexto(e.target.value)}
                 style={styles.searchInput}
+                className="search-responsive"
               />
             </div>
 
@@ -759,7 +797,6 @@ export default function App() {
                       )}
 
                       <td style={styles.td}>
-                        {/* Exibe todas as modalidades marcadas em qualquer coluna */}
                         {renderizarCelulaSimplificada(
                           Object.keys(linha)
                             .filter(k => k.toLowerCase().includes('esportes') || k.toLowerCase().includes('jogos'))
@@ -783,13 +820,13 @@ export default function App() {
           </section>
         )}
 
-        {/* ABA 4: MONTAR TIMES (COM SUCESSO DE BUSCA E CRIAÇÃO POR CURSO/RANDOM) */}
+        {/* ABA 4: MONTAR TIMES */}
         {abaAtiva === 'times' && (
           <section style={styles.section}>
             
             {/* PAINEL DE CONFIGURAÇÕES */}
             <div style={{ ...styles.cardGraficoPresentation, marginBottom: '20px', padding: '18px 24px' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyBetween: 'space-between', gap: '16px' }} className="config-panel-responsive">
                 
                 {/* Seleção de Modalidade */}
                 <div style={{ flex: '1 1 200px' }}>
@@ -838,7 +875,7 @@ export default function App() {
                 {/* Quantidade Manual de Times */}
                 <div>
                   <label style={{ ...styles.labelInfo, marginBottom: '6px' }}>Qtd. Times</label>
-                  <div style={styles.navTabs}>
+                  <div style={styles.navTabs} className="nav-tabs-responsive">
                     {[1, 2, 3, 4, 5].map((num) => (
                       <button
                         key={num}
@@ -855,7 +892,7 @@ export default function App() {
                 </div>
 
                 {/* Botões de Ação */}
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '10px' }}>
                   <button
                     onClick={() => autoDistribuirTimes('random')}
                     style={{
@@ -863,7 +900,8 @@ export default function App() {
                       backgroundColor: '#8b5cf6',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '4px'
+                      gap: '4px',
+                      flex: '1'
                     }}
                   >
                     🎲 Random
@@ -876,7 +914,8 @@ export default function App() {
                       backgroundColor: '#0284c7',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '4px'
+                      gap: '4px',
+                      flex: '1'
                     }}
                   >
                     🎓 Por Curso
@@ -898,7 +937,7 @@ export default function App() {
             </div>
 
             {/* PAINEL PRINCIPAL DE ESCALAÇÃO */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
               
               {/* Coluna Esquerda: Lista de Atletas Disponíveis */}
               <div style={styles.cardGraficoPresentation}>
@@ -963,7 +1002,7 @@ export default function App() {
               <div style={styles.cardGraficoPresentation}>
                 
                 {/* Abas para alternar entre os times */}
-                <div style={{ ...styles.navTabs, marginBottom: '16px', overflowX: 'auto' }}>
+                <div style={{ ...styles.navTabs, marginBottom: '16px' }} className="nav-tabs-responsive">
                   {Array.from({ length: qtdTimes }).map((_, idx) => (
                     <button
                       key={idx}
@@ -1139,16 +1178,16 @@ export default function App() {
   );
 }
 
-// ESTILOS COMPLETO (CSS-in-JS)
+// ESTILOS BASE (MANTÉM O DESIGN NO PC E ADAPTA NO MOBILE)
 const styles = {
   appContainer: {
     backgroundColor: '#070a12',
     color: '#f1f5f9',
     minHeight: '100vh',
-    padding: '30px 50px',
+    padding: '30px 40px',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
     position: 'relative',
-    overflow: 'hidden',
+    overflowX: 'hidden',
   },
   containerCenter: {
     backgroundColor: '#070a12',
@@ -1175,7 +1214,7 @@ const styles = {
     letterSpacing: '1.2px',
   },
   title: {
-    fontSize: '26px',
+    fontSize: '24px',
     fontWeight: '800',
     margin: '4px 0 0 0',
     color: '#f8fafc',
@@ -1286,6 +1325,7 @@ const styles = {
     gap: '12px',
     marginTop: '8px',
     marginBottom: '6px',
+    flexWrap: 'wrap',
   },
   kpiValue: {
     fontSize: '28px',
@@ -1293,7 +1333,7 @@ const styles = {
     color: '#f8fafc',
   },
   kpiValueHighlight: {
-    fontSize: '24px',
+    fontSize: '22px',
     fontWeight: '800',
     color: '#ef4444',
   },
@@ -1335,7 +1375,7 @@ const styles = {
   // Gráficos
   gridGraficos: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(440px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
     gap: '24px',
   },
   cardGraficoPresentation: {
@@ -1343,7 +1383,7 @@ const styles = {
     backdropFilter: 'blur(12px)',
     borderRadius: '16px',
     border: '1px solid rgba(255, 255, 255, 0.08)',
-    padding: '24px',
+    padding: '20px',
     boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.5)',
   },
   cardGraficoHeader: {
@@ -1431,7 +1471,7 @@ const styles = {
   // Resumo por Modalidade
   gridCategorias: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
     gap: '20px',
     marginTop: '16px',
   },
@@ -1459,6 +1499,7 @@ const styles = {
   metricaDuplaBox: {
     display: 'flex',
     gap: '8px',
+    flexWrap: 'wrap',
   },
   listaModalidadesRefinada: {
     display: 'flex',
@@ -1518,7 +1559,7 @@ const styles = {
     color: '#f8fafc',
     fontSize: '13px',
     outline: 'none',
-    width: '320px',
+    boxSizing: 'border-box',
   },
   tableWrapper: {
     backgroundColor: 'rgba(19, 28, 46, 0.5)',
@@ -1533,6 +1574,7 @@ const styles = {
     borderCollapse: 'collapse',
     textAlign: 'left',
     fontSize: '13px',
+    minWidth: '600px',
   },
   th: {
     padding: '16px 20px',
@@ -1628,17 +1670,19 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+    padding: '16px',
   },
   modalCard: {
     backgroundColor: '#131c2e',
     border: '1px solid rgba(255, 255, 255, 0.15)',
     borderRadius: '20px',
-    padding: '30px',
+    padding: '24px',
     width: '580px',
-    maxWidth: '90%',
+    maxWidth: '100%',
     maxHeight: '85vh',
     overflowY: 'auto',
     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+    boxSizing: 'border-box',
   },
   modalHeader: {
     display: 'flex',
@@ -1665,7 +1709,7 @@ const styles = {
   },
   modalGridInfo: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
     gap: '14px',
     backgroundColor: '#0b1220',
     padding: '16px',
