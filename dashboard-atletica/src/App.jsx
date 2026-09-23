@@ -910,7 +910,7 @@ export default function App() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '200px', maxHeight: '350px', overflowY: 'auto', marginBottom: '20px' }}>
                   {(timesEscalados[timeAtivoAbas] || []).length === 0 ? (
                     <p style={{ color: '#64748b', fontSize: '13px', textAlign: 'center', margin: 'auto' }}>
-                      Nenhum atleta neste time. Adicione manualmente ou use o **"🎲 Sortear Random"**.
+                      Nenhum atleta neste time. Adicione manualmente ou use o "🎲 Sortear Random".
                     </p>
                   ) : (
                     (timesEscalados[timeAtivoAbas] || []).map((atleta, idx) => (
