@@ -15,34 +15,29 @@ const MAPA_NORMALIZACAO = {
   'league of legends': 'League of Legends',
 };
 
-const ICONES_MODALIDADES = {
-  'Vôlei': '🏐',
-  'Futsal': '⚽',
-  'Futebol de Campo': '⚽',
-  'Basquete': '🏀',
-  'Handebol': '🤾',
-  'Beach Tennis': '🎾',
-  'Atletismo': '🏃',
-  'Queimada': '🔥',
-  'Futvolei': '🏐',
-  'Futebol Society (Fut 7)': '⚽',
-  'Xadrez': '♟️',
-  'Tênis de mesa': '🏓',
-  'Damas': '🏁',
-  'Poker': '♠️',
-  'Truco': '🃏',
-  'Sinuca': '🎱',
-  'Judô': '🥋',
-  'Valorant': '🎯',
-  'EA FC (FIFA)': '🎮',
-  'Counter Strike': '💣',
-  'League of Legends': '⚔️',
-  'Fortnite': '🪂',
-  'Rocket League': '🚗',
-  'Mortal Kombat': '🥊',
-  'Dota': '🛡️',
-  'Marvel Rivals': '🦸',
-  'PUBG: BATTLEGROUNDS': '🪖',
+// Ícones e tamanho padrão de atletas titulares por time em cada modalidade
+const REGRAS_MODALIDADES = {
+  'Vôlei': { icone: '🏐', tamPadrao: 6 },
+  'Futsal': { icone: '⚽', tamPadrao: 5 },
+  'Futebol de Campo': { icone: '⚽', tamPadrao: 11 },
+  'Futebol Society (Fut 7)': { icone: '⚽', tamPadrao: 7 },
+  'Basquete': { icone: '🏀', tamPadrao: 5 },
+  'Handebol': { icone: '🤾', tamPadrao: 7 },
+  'Beach Tennis': { icone: '🎾', tamPadrao: 2 },
+  'Truco': { icone: '🃏', tamPadrao: 2 },
+  'Sinuca': { icone: '🎱', tamPadrao: 1 },
+  'Tênis de mesa': { icone: '🏓', tamPadrao: 1 },
+  'Xadrez': { icone: '♟️', tamPadrao: 1 },
+  'Poker': { icone: '♠️', tamPadrao: 6 },
+  'Valorant': { icone: '🎯', tamPadrao: 5 },
+  'EA FC (FIFA)': { icone: '🎮', tamPadrao: 1 },
+  'Counter Strike': { icone: '💣', tamPadrao: 5 },
+  'League of Legends': { icone: '⚔️', tamPadrao: 5 },
+  'Fortnite': { icone: '🪂', tamPadrao: 4 },
+  'Rocket League': { icone: '🚗', tamPadrao: 3 },
+  'Dota': { icone: '🛡️', tamPadrao: 5 },
+  'Marvel Rivals': { icone: '🦸', tamPadrao: 6 },
+  'PUBG: BATTLEGROUNDS': { icone: '🪖', tamPadrao: 4 },
 };
 
 // --- FUNÇÕES DE HIGIENIZAÇÃO ---
@@ -138,7 +133,7 @@ const renderizarCelulaSimplificada = (valor, nomeColuna) => {
     return (
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
         {itens.slice(0, 3).map((item, idx) => {
-          const icone = ICONES_MODALIDADES[item] || '🏆';
+          const icone = REGRAS_MODALIDADES[item]?.icone || '🏆';
           return (
             <span key={idx} style={styles.badgeModalidade}>
               {icone} {item}
@@ -166,11 +161,13 @@ export default function App() {
   const [erro, setErro] = useState(null);
 
   // Estados da aba de Montar Times
-  const [modalidadeSelecionada, setModalidadeSelecionada] = useState('Futsal');
-  const [qtdTimes, setQtdTimes] = useState(1); // Padrão: 1 time
-  const [timeAtivoAbas, setTimeAtivoAbas] = useState(0); // Índice do time sendo editado manualmente
-  const [timesEscalados, setTimesEscalados] = useState({ 0: [], 1: [], 2: [] });
-  const [nomesTimes, setNomesTimes] = useState({ 0: 'Time A', 1: 'Time B', 2: 'Time C' });
+  const [modalidadeSelecionada, setModalidadeSelecionada] = useState('Vôlei');
+  const [tamanhoPorTime, setTamanhoPorTime] = useState(6);
+  const [filtroCursoTime, setFiltroCursoTime] = useState('TODOS');
+  const [qtdTimes, setQtdTimes] = useState(1);
+  const [timeAtivoAbas, setTimeAtivoAbas] = useState(0);
+  const [timesEscalados, setTimesEscalados] = useState({ 0: [] });
+  const [nomesTimes, setNomesTimes] = useState({ 0: 'Time A', 1: 'Time B', 2: 'Time C', 3: 'Time D', 4: 'Time E' });
   const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
@@ -260,6 +257,14 @@ export default function App() {
     });
   }, []);
 
+  const handleTrocarModalidade = (novaMod) => {
+    setModalidadeSelecionada(novaMod);
+    const regra = REGRAS_MODALIDADES[novaMod];
+    const tam = regra ? regra.tamPadrao : 5;
+    setTamanhoPorTime(tam);
+    limparEscalacao();
+  };
+
   const dadosFiltrados = dados.filter((atleta) => {
     if (!filtroTexto) return true;
     const busca = filtroTexto.toLowerCase();
@@ -306,18 +311,37 @@ export default function App() {
   const colCurso = colunas.find(c => c.toLowerCase().includes('curso'));
   const colTurno = colunas.find(c => c.toLowerCase().includes('turno'));
   const colWhats = colunas.find(c => c.toLowerCase().includes('whatsapp') || c.toLowerCase().includes('telefone'));
-  const colEsportes = colunas.find(c => c.toLowerCase().includes('esportes') || c.toLowerCase().includes('jogos'));
   const colCarimbo = colunas.find(c => c.toLowerCase().includes('carimbo') || c.toLowerCase().includes('data'));
 
-  // Variáveis para a aba de Montagem de Times
-  const listaModalidadesUnicas = Object.values(estatisticas).flatMap(cat => Object.keys(cat.itens));
+  // Lista de todas as modalidades únicas extraídas da planilha
+  const listaModalidadesUnicas = Array.from(
+    new Set(Object.values(estatisticas).flatMap(cat => Object.keys(cat.itens)))
+  ).sort();
 
+  // CORREÇÃO DO BUG: Busca em TODAS as colunas que possuem esportes/jogos
   const atletasDaModalidade = dados.filter(atleta => {
-    if (!colEsportes || !atleta[colEsportes]) return false;
-    return atleta[colEsportes].toLowerCase().includes(modalidadeSelecionada.toLowerCase());
+    return Object.keys(atleta).some(col => {
+      const colLower = col.toLowerCase();
+      if (colLower.includes('esportes') || colLower.includes('jogos') || colLower.includes('e-sports')) {
+        const valor = atleta[col] || '';
+        return valor.toLowerCase().includes(modalidadeSelecionada.toLowerCase());
+      }
+      return false;
+    });
   });
 
-  // Retorna em qual time o atleta está escalado (-1 se em nenhum)
+  // Filtra por curso (se ativado)
+  const atletasFiltradosPorCurso = atletasDaModalidade.filter(atleta => {
+    if (filtroCursoTime === 'TODOS') return true;
+    const cursoAtleta = atleta[colCurso] || '';
+    return cursoAtleta.toLowerCase().includes(filtroCursoTime.toLowerCase());
+  });
+
+  // Lista de cursos disponíveis na modalidade selecionada
+  const listaCursosDisponiveis = Array.from(
+    new Set(atletasDaModalidade.map(a => a[colCurso] || 'Outros').filter(Boolean))
+  ).sort();
+
   const getIndexTimeAtleta = (nomeAtleta) => {
     for (let i = 0; i < qtdTimes; i++) {
       if (timesEscalados[i]?.some(a => a.nome === nomeAtleta)) {
@@ -327,62 +351,80 @@ export default function App() {
     return -1;
   };
 
-  // Alterna a presença do atleta no time atualmente selecionado
   const toggleAtletaNoTime = (atleta, timeTargetIdx = timeAtivoAbas) => {
     const timeIndexAtual = getIndexTimeAtleta(atleta.nome);
     
     setTimesEscalados(prev => {
       const novostimes = { ...prev };
-      
-      // Se já estava em outro time, remove de lá primeiro
       if (timeIndexAtual !== -1) {
         novostimes[timeIndexAtual] = novostimes[timeIndexAtual].filter(a => a.nome !== atleta.nome);
       }
-
-      // Se não estava neste time alvo, adiciona
       if (timeIndexAtual !== timeTargetIdx) {
         novostimes[timeTargetIdx] = [...(novostimes[timeTargetIdx] || []), atleta];
       }
-
       return novostimes;
     });
   };
 
-  // Sorteio Randomico de Atletas entre os times ativos
-  const sortearTimesRandom = () => {
-    if (atletasDaModalidade.length === 0) return;
+  // DISTRIBUIÇÃO INTELIGENTE POR REGRA / RANDOM / CURSO
+  const autoDistribuirTimes = (modo = 'random') => {
+    const baseAtletas = modo === 'curso' ? atletasFiltradosPorCurso : atletasDaModalidade;
+    if (baseAtletas.length === 0) return;
 
-    // Embaralha a lista de atletas (Fisher-Yates Shuffle)
-    const embaralhados = [...atletasDaModalidade].map(a => ({
+    const numTimesNecessarios = Math.max(1, Math.ceil(baseAtletas.length / tamanhoPorTime));
+    setQtdTimes(numTimesNecessarios);
+    setTimeAtivoAbas(0);
+
+    let listaProcessar = [...baseAtletas].map(a => ({
       nome: a[colNome] || '-',
       whats: a[colWhats] || '-',
       curso: a[colCurso] || '-'
-    })).sort(() => Math.random() - 0.5);
+    }));
 
-    const novosTimes = { 0: [], 1: [], 2: [] };
+    if (modo === 'random') {
+      listaProcessar.sort(() => Math.random() - 0.5);
+    } else if (modo === 'curso') {
+      // Agrupa prioritariamente por curso
+      listaProcessar.sort((a, b) => a.curso.localeCompare(b.curso));
+    }
 
-    // Distribui ciclicamente entre a quantidade de times configurada
-    embaralhados.forEach((atleta, index) => {
-      const timeDestino = index % qtdTimes;
+    const novosTimes = {};
+    const novosNomes = { ...nomesTimes };
+
+    for (let i = 0; i < numTimesNecessarios; i++) {
+      novosTimes[i] = [];
+      if (modo === 'curso' && filtroCursoTime !== 'TODOS') {
+        novosNomes[i] = `${filtroCursoTime} - Time ${i + 1}`;
+      }
+    }
+
+    if (modo === 'curso' && filtroCursoTime !== 'TODOS') {
+      setNomesTimes(novosNomes);
+    }
+
+    listaProcessar.forEach((atleta, index) => {
+      const targetTime = Math.floor(index / tamanhoPorTime);
+      const timeDestino = targetTime < numTimesNecessarios ? targetTime : numTimesNecessarios - 1;
       novosTimes[timeDestino].push(atleta);
     });
 
     setTimesEscalados(novosTimes);
   };
 
-  // Limpa todos os times escalados
   const limparEscalacao = () => {
-    setTimesEscalados({ 0: [], 1: [], 2: [] });
+    setTimesEscalados({ 0: [] });
+    setQtdTimes(1);
+    setTimeAtivoAbas(0);
   };
 
-  // Formata e copia o texto de todos os times para o WhatsApp
   const copiarEscalacaoWhatsApp = () => {
     let texto = `🏆 *ESCALAÇÃO - ${modalidadeSelecionada.toUpperCase()}*\n`;
+    texto += `📌 *Regra:* ${tamanhoPorTime} atletas por time\n`;
     texto += `-------------------------------\n`;
 
     for (let i = 0; i < qtdTimes; i++) {
       const timeList = timesEscalados[i] || [];
-      const nomeDoTime = nomesTimes[i] || `Time ${i + 1}`;
+      const nomeDoTime = nomesTimes[i] || `Time ${String.fromCharCode(65 + i)}`;
       
       texto += `📋 *${nomeDoTime}* (${timeList.length} atletas)\n`;
       if (timeList.length === 0) {
@@ -509,7 +551,7 @@ export default function App() {
                 <span style={styles.kpiLabelHighlight}>Modalidade Mais Procurada</span>
                 <div style={styles.kpiValueContainer}>
                   <span style={styles.kpiValueHighlight}>
-                    {ICONES_MODALIDADES[topGeral.nome] || '🏆'} {topGeral.nome}
+                    {REGRAS_MODALIDADES[topGeral.nome]?.icone || '🏆'} {topGeral.nome}
                   </span>
                   <span style={styles.kpiBadgeHighlight}>{topGeral.qtd} atletas</span>
                 </div>
@@ -553,7 +595,7 @@ export default function App() {
                           const porcentagemBarra = (qtd / maxQtd) * 100;
                           const porcentagemTotal = ((qtd / totalCategoria) * 100).toFixed(0);
                           const isLider = i === 0;
-                          const icone = ICONES_MODALIDADES[itemNome] || '🏆';
+                          const icone = REGRAS_MODALIDADES[itemNome]?.icone || '🏆';
 
                           return (
                             <div key={i} style={styles.barRow}>
@@ -621,7 +663,7 @@ export default function App() {
                         .sort(([, a], [, b]) => b - a)
                         .map(([itemNome, qtd], i) => {
                           const porcentagem = Math.round((qtd / maxQtd) * 100);
-                          const icone = ICONES_MODALIDADES[itemNome] || '🏆';
+                          const icone = REGRAS_MODALIDADES[itemNome]?.icone || '🏆';
 
                           return (
                             <div key={i} style={styles.itemModalidadeRow}>
@@ -675,7 +717,7 @@ export default function App() {
                     {colCurso && <th style={styles.th}>Curso</th>}
                     {colTurno && <th style={styles.th}>Turno</th>}
                     {colWhats && <th style={styles.th}>WhatsApp</th>}
-                    {colEsportes && <th style={styles.th}>Modalidades Selecionadas</th>}
+                    <th style={styles.th}>Modalidades Selecionadas</th>
                     <th style={{ ...styles.th, textAlign: 'right' }}>Ação</th>
                   </tr>
                 </thead>
@@ -716,11 +758,17 @@ export default function App() {
                         </td>
                       )}
 
-                      {colEsportes && (
-                        <td style={styles.td}>
-                          {renderizarCelulaSimplificada(linha[colEsportes], colEsportes)}
-                        </td>
-                      )}
+                      <td style={styles.td}>
+                        {/* Exibe todas as modalidades marcadas em qualquer coluna */}
+                        {renderizarCelulaSimplificada(
+                          Object.keys(linha)
+                            .filter(k => k.toLowerCase().includes('esportes') || k.toLowerCase().includes('jogos'))
+                            .map(k => linha[k])
+                            .filter(Boolean)
+                            .join(', '), 
+                          'esportes'
+                        )}
+                      </td>
 
                       <td style={{ ...styles.td, textAlign: 'right' }}>
                         <span style={styles.btnVerFichaSutil}>
@@ -735,38 +783,63 @@ export default function App() {
           </section>
         )}
 
-        {/* ABA 4: MONTAR TIMES */}
+        {/* ABA 4: MONTAR TIMES (COM SUCESSO DE BUSCA E CRIAÇÃO POR CURSO/RANDOM) */}
         {abaAtiva === 'times' && (
           <section style={styles.section}>
             
-            {/* BARRA SUPERIOR DE CONFIGURAÇÃO DE TIMES */}
-            <div style={{ ...styles.cardGraficoPresentation, marginBottom: '20px', padding: '16px 24px' }}>
+            {/* PAINEL DE CONFIGURAÇÕES */}
+            <div style={{ ...styles.cardGraficoPresentation, marginBottom: '20px', padding: '18px 24px' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
                 
                 {/* Seleção de Modalidade */}
-                <div style={{ flex: '1 1 240px' }}>
+                <div style={{ flex: '1 1 200px' }}>
                   <label style={{ ...styles.labelInfo, marginBottom: '6px' }}>Modalidade / Jogo</label>
                   <select 
                     value={modalidadeSelecionada} 
-                    onChange={(e) => {
-                      setModalidadeSelecionada(e.target.value);
-                      limparEscalacao();
-                    }}
+                    onChange={(e) => handleTrocarModalidade(e.target.value)}
                     style={{ ...styles.searchInput, width: '100%', cursor: 'pointer', backgroundColor: '#0b1220' }}
                   >
                     {listaModalidadesUnicas.map((mod, i) => (
                       <option key={i} value={mod} style={{ backgroundColor: '#0f172a' }}>
-                        {ICONES_MODALIDADES[mod] || '🏆'} {mod}
+                        {REGRAS_MODALIDADES[mod]?.icone || '🏆'} {mod}
                       </option>
                     ))}
                   </select>
                 </div>
 
-                {/* Seleção da Quantidade de Times (1, 2 ou 3) */}
+                {/* Filtro por Curso */}
+                <div style={{ flex: '1 1 180px' }}>
+                  <label style={{ ...styles.labelInfo, marginBottom: '6px' }}>Filtrar por Curso</label>
+                  <select 
+                    value={filtroCursoTime} 
+                    onChange={(e) => setFiltroCursoTime(e.target.value)}
+                    style={{ ...styles.searchInput, width: '100%', cursor: 'pointer', backgroundColor: '#0b1220' }}
+                  >
+                    <option value="TODOS">🌐 Todos os Cursos</option>
+                    {listaCursosDisponiveis.map((c, i) => (
+                      <option key={i} value={c} style={{ backgroundColor: '#0f172a' }}>🎓 {c}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Regra de Titulares por Time */}
+                <div style={{ flex: '0 0 120px' }}>
+                  <label style={{ ...styles.labelInfo, marginBottom: '6px' }}>Titulares/Time</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={tamanhoPorTime}
+                    onChange={(e) => setTamanhoPorTime(Math.max(1, parseInt(e.target.value) || 1))}
+                    style={{ ...styles.searchInput, width: '100%', textAlign: 'center', backgroundColor: '#0b1220' }}
+                  />
+                </div>
+
+                {/* Quantidade Manual de Times */}
                 <div>
-                  <label style={{ ...styles.labelInfo, marginBottom: '6px' }}>Quantidade de Times</label>
+                  <label style={{ ...styles.labelInfo, marginBottom: '6px' }}>Qtd. Times</label>
                   <div style={styles.navTabs}>
-                    {[1, 2, 3].map((num) => (
+                    {[1, 2, 3, 4, 5].map((num) => (
                       <button
                         key={num}
                         onClick={() => {
@@ -775,26 +848,40 @@ export default function App() {
                         }}
                         style={qtdTimes === num ? styles.tabActive : styles.tabInactive}
                       >
-                        {num} {num === 1 ? 'Time' : 'Times'}
+                        {num}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* Botão de Sorteio Randômico e Limpar */}
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', marginTop: '18px' }}>
+                {/* Botões de Ação */}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
                   <button
-                    onClick={sortearTimesRandom}
+                    onClick={() => autoDistribuirTimes('random')}
                     style={{
                       ...styles.tabActive,
                       backgroundColor: '#8b5cf6',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '6px'
+                      gap: '4px'
                     }}
                   >
-                    🎲 Sortear Random
+                    🎲 Random
                   </button>
+
+                  <button
+                    onClick={() => autoDistribuirTimes('curso')}
+                    style={{
+                      ...styles.tabActive,
+                      backgroundColor: '#0284c7',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    🎓 Por Curso
+                  </button>
+
                   <button
                     onClick={limparEscalacao}
                     style={{
@@ -810,28 +897,29 @@ export default function App() {
               </div>
             </div>
 
-            {/* PAINEL PRINCIPAL */}
+            {/* PAINEL PRINCIPAL DE ESCALAÇÃO */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
               
-              {/* Coluna Esquerda: Lista de Atletas Inscritos */}
+              {/* Coluna Esquerda: Lista de Atletas Disponíveis */}
               <div style={styles.cardGraficoPresentation}>
                 <div style={styles.cardGraficoHeader}>
                   <div>
-                    <h3 style={styles.cardGraficoTitle}>Atletas Inscritos ({atletasDaModalidade.length})</h3>
+                    <h3 style={styles.cardGraficoTitle}>
+                      Inscritos em {modalidadeSelecionada} ({atletasFiltradosPorCurso.length})
+                    </h3>
                     <p style={{ ...styles.kpiSubtext, marginTop: '4px' }}>
-                      Adicionando no: <strong style={{ color: '#38bdf8' }}>{nomesTimes[timeAtivoAbas]}</strong>
+                      Adicionando no: <strong style={{ color: '#38bdf8' }}>{nomesTimes[timeAtivoAbas] || 'Time ' + (timeAtivoAbas + 1)}</strong>
                     </p>
                   </div>
                 </div>
 
-                {/* Lista de Atletas do Jogo */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '420px', overflowY: 'auto' }}>
-                  {atletasDaModalidade.length === 0 ? (
+                  {atletasFiltradosPorCurso.length === 0 ? (
                     <p style={{ color: '#64748b', fontSize: '13px', textAlign: 'center', padding: '20px' }}>
-                      Nenhum atleta inscrito nesta modalidade.
+                      Nenhum atleta encontrado para esta seleção.
                     </p>
                   ) : (
-                    atletasDaModalidade.map((atleta, idx) => {
+                    atletasFiltradosPorCurso.map((atleta, idx) => {
                       const nome = atleta[colNome] || '-';
                       const whats = atleta[colWhats] || '-';
                       const curso = atleta[colCurso] || '-';
@@ -862,7 +950,7 @@ export default function App() {
                           >
                             {estaNoTimeAtivo 
                               ? 'Remover' 
-                              : (timeIndex !== -1 ? `No ${nomesTimes[timeIndex]}` : '+ Adicionar')}
+                              : (timeIndex !== -1 ? `No ${nomesTimes[timeIndex] || 'Time ' + (timeIndex + 1)}` : '+ Adicionar')}
                           </button>
                         </div>
                       );
@@ -871,65 +959,72 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Coluna Direita: Painel de Times e Escalação */}
+              {/* Coluna Direita: Escalação do Time */}
               <div style={styles.cardGraficoPresentation}>
                 
-                {/* Abas para Alternar Entre os Times Criados (se qtdTimes > 1) */}
-                {qtdTimes > 1 && (
-                  <div style={{ ...styles.navTabs, marginBottom: '16px' }}>
-                    {Array.from({ length: qtdTimes }).map((_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setTimeAtivoAbas(idx)}
-                        style={timeAtivoAbas === idx ? styles.tabActive : styles.tabInactive}
-                      >
-                        {nomesTimes[idx]} ({timesEscalados[idx]?.length || 0})
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {/* Abas para alternar entre os times */}
+                <div style={{ ...styles.navTabs, marginBottom: '16px', overflowX: 'auto' }}>
+                  {Array.from({ length: qtdTimes }).map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setTimeAtivoAbas(idx)}
+                      style={timeAtivoAbas === idx ? styles.tabActive : styles.tabInactive}
+                    >
+                      {nomesTimes[idx] || `Time ${String.fromCharCode(65 + idx)}`} ({timesEscalados[idx]?.length || 0}/{tamanhoPorTime})
+                    </button>
+                  ))}
+                </div>
 
                 <div style={styles.cardGraficoHeader}>
                   <div>
                     <h3 style={styles.cardGraficoTitle}>Escalação do Time</h3>
-                    <span style={styles.badgeRefinado}>
-                      {(timesEscalados[timeAtivoAbas] || []).length} selecionados
+                    <span style={(timesEscalados[timeAtivoAbas] || []).length >= tamanhoPorTime ? styles.badgeRefinado : styles.badgeBruto}>
+                      {(timesEscalados[timeAtivoAbas] || []).length} / {tamanhoPorTime} titulares
                     </span>
                   </div>
 
-                  {/* Nome editável do time ativo */}
                   <input 
                     type="text" 
-                    value={nomesTimes[timeAtivoAbas] || ''} 
+                    value={nomesTimes[timeAtivoAbas] || `Time ${String.fromCharCode(65 + timeAtivoAbas)}`} 
                     onChange={(e) => setNomesTimes({ ...nomesTimes, [timeAtivoAbas]: e.target.value })}
-                    style={{ ...styles.searchInput, width: '120px', padding: '6px 10px', fontSize: '12px' }}
+                    style={{ ...styles.searchInput, width: '130px', padding: '6px 10px', fontSize: '12px' }}
                   />
                 </div>
 
-                {/* Atletas Escalados no Time Selecionado */}
+                {/* Lista de Escalados */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '200px', maxHeight: '350px', overflowY: 'auto', marginBottom: '20px' }}>
                   {(timesEscalados[timeAtivoAbas] || []).length === 0 ? (
                     <p style={{ color: '#64748b', fontSize: '13px', textAlign: 'center', margin: 'auto' }}>
-                      Nenhum atleta neste time. Adicione manualmente ou use o "🎲 Sortear Random".
+                      Nenhum atleta escalado neste time. Use os botões **"🎲 Random"** ou **"🎓 Por Curso"**.
                     </p>
                   ) : (
-                    (timesEscalados[timeAtivoAbas] || []).map((atleta, idx) => (
-                      <div key={idx} style={{ ...styles.itemModalidadeRow, backgroundColor: 'rgba(2, 132, 199, 0.1)' }}>
-                        <span style={{ color: '#38bdf8', fontWeight: '700', fontSize: '12px' }}>
-                          {idx + 1}. {atleta.nome} ({atleta.curso})
-                        </span>
-                        <button 
-                          onClick={() => toggleAtletaNoTime(atleta, timeAtivoAbas)}
-                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '14px' }}
+                    (timesEscalados[timeAtivoAbas] || []).map((atleta, idx) => {
+                      const isExcedente = idx >= tamanhoPorTime;
+                      return (
+                        <div 
+                          key={idx} 
+                          style={{ 
+                            ...styles.itemModalidadeRow, 
+                            backgroundColor: isExcedente ? 'rgba(234, 179, 8, 0.1)' : 'rgba(2, 132, 199, 0.1)',
+                            border: isExcedente ? '1px solid rgba(234, 179, 8, 0.3)' : '1px solid rgba(2, 132, 199, 0.2)'
+                          }}
                         >
-                          ✕
-                        </button>
-                      </div>
-                    ))
+                          <span style={{ color: isExcedente ? '#fde047' : '#38bdf8', fontWeight: '700', fontSize: '12px' }}>
+                            {idx + 1}. {atleta.nome} ({atleta.curso}) {isExcedente ? '⚠️ (Reserva)' : ''}
+                          </span>
+                          <button 
+                            onClick={() => toggleAtletaNoTime(atleta, timeAtivoAbas)}
+                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '14px' }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
 
-                {/* Botão Copiar WhatsApp (Copia todos os times ativos juntos) */}
+                {/* Copiar WhatsApp */}
                 <button
                   onClick={copiarEscalacaoWhatsApp}
                   style={{
@@ -940,7 +1035,7 @@ export default function App() {
                     padding: '12px'
                   }}
                 >
-                  {copiado ? '✓ Escalação Copiada!' : '📋 Copiar Todos os Times para WhatsApp'}
+                  {copiado ? '✓ Escalação Copiada!' : '📋 Copiar Escalação para WhatsApp'}
                 </button>
               </div>
 
