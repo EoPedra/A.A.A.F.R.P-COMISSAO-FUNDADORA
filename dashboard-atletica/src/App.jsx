@@ -39,6 +39,19 @@ const REGRAS_MODALIDADES = {
   'PUBG: BATTLEGROUNDS': { icone: '🪖', tamPadrao: 4 },
 };
 
+// --- HELPER PADRONIZADO PARA IDENTIFICAR COLUNAS DE JOGOS/ESPORTES ---
+const isColunaModalidade = (nomeColuna) => {
+  if (!nomeColuna) return false;
+  const colLower = nomeColuna.toLowerCase();
+  return (
+    colLower.includes('esporte') ||
+    colLower.includes('esports') ||
+    colLower.includes('e-sports') ||
+    colLower.includes('jogo') ||
+    colLower.includes('modalidade')
+  );
+};
+
 // --- FUNÇÕES DE HIGIENIZAÇÃO ---
 
 const formatarWhatsApp = (val) => {
@@ -113,7 +126,6 @@ const agruparEMesclarAtletas = (dadosTratados) => {
     const whats = (linha[colWhats] || '').replace(/\D/g, '');
     const nome = (linha[colNome] || '').trim().toLowerCase();
 
-    // Chave única para rastrear o mesmo atleta
     const chaveUnica = whats.length >= 8 ? whats : nome;
 
     if (!chaveUnica) return;
@@ -130,7 +142,6 @@ const agruparEMesclarAtletas = (dadosTratados) => {
       atletaExistente._qtdEnvios += 1;
       atletaExistente._historicoEnvios.push(linha);
 
-      // Checa divergência cadastral (Curso/Turno)
       const colCurso = keys.find(c => c.toLowerCase().includes('curso'));
       const colTurno = keys.find(c => c.toLowerCase().includes('turno'));
 
@@ -141,10 +152,8 @@ const agruparEMesclarAtletas = (dadosTratados) => {
         atletaExistente._teveAlteracaoDados = true;
       }
 
-      // Mescla dos Esportes/Jogos
       keys.forEach((col) => {
-        const colLower = col.toLowerCase();
-        if (colLower.includes('esportes') || colLower.includes('jogos') || colLower.includes('e-sports')) {
+        if (isColunaModalidade(col)) {
           const antigo = atletaExistente[col] || '';
           const novo = linha[col] || '';
 
@@ -189,17 +198,16 @@ const renderizarCelulaSimplificada = (valor, nomeColuna) => {
     return <span style={styles.linkWhatsapp}>📱 {valor}</span>;
   }
 
-  if (colLower.includes('esportes') || colLower.includes('jogos') || colLower.includes('e-sports')) {
+  if (isColunaModalidade(nomeColuna)) {
     const itens = valor.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
     const eJogoUnico = itens.length === 1;
 
     return (
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-        {itens.slice(0, 3).map((item, idx) => {
+        {itens.slice(0, 4).map((item, idx) => {
           const icone = REGRAS_MODALIDADES[item]?.icone || '🏆';
           return (
             <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {/* Ícone fora da tag quando for jogo único */}
               {eJogoUnico && <span title="Inscrição Exclusiva" style={{ fontSize: '13px' }}>🎯</span>}
               <span style={styles.badgeModalidade}>
                 {icone} {item}
@@ -207,8 +215,8 @@ const renderizarCelulaSimplificada = (valor, nomeColuna) => {
             </div>
           );
         })}
-        {itens.length > 3 && (
-          <span style={styles.badgeMaisModalidades}>+{itens.length - 3}</span>
+        {itens.length > 4 && (
+          <span style={styles.badgeMaisModalidades}>+{itens.length - 4}</span>
         )}
       </div>
     );
@@ -261,7 +269,6 @@ export default function App() {
             return linhaTratada;
           });
 
-          // APLICA A MESCLAGEM AUTOMÁTICA DE ATLETAS
           const dadosAgrupados = agruparEMesclarAtletas(dadosTratados);
 
           setDados(dadosAgrupados);
@@ -270,11 +277,7 @@ export default function App() {
           const categorias = {};
           dadosAgrupados.forEach((atleta) => {
             Object.keys(atleta).forEach((coluna) => {
-              if (
-                coluna.includes("Esportes") || 
-                coluna.includes("Jogos") || 
-                coluna.includes("E-sports")
-              ) {
+              if (isColunaModalidade(coluna)) {
                 const nomeCategoria = coluna.trim();
                 if (!categorias[nomeCategoria]) {
                   categorias[nomeCategoria] = {
@@ -389,8 +392,7 @@ export default function App() {
 
   const atletasDaModalidade = dados.filter(atleta => {
     return Object.keys(atleta).some(col => {
-      const colLower = col.toLowerCase();
-      if (colLower.includes('esportes') || colLower.includes('jogos') || colLower.includes('e-sports')) {
+      if (isColunaModalidade(col)) {
         const valor = atleta[col] || '';
         return valor.toLowerCase().includes(modalidadeSelecionada.toLowerCase());
       }
@@ -510,7 +512,6 @@ export default function App() {
 
   return (
     <div style={styles.appContainer} className="app-container">
-      {/* REGRAS CSS RESPONSIVAS DEDICADAS */}
       <style>{`
         @keyframes moverGlow1 {
           0% { transform: translate(0px, 0px) scale(1); }
@@ -555,7 +556,6 @@ export default function App() {
           background-color: rgba(30, 41, 59, 0.85) !important;
         }
 
-        /* MEDIA QUERIES PARA TELEMÓVEL E TABLET */
         @media (max-width: 768px) {
           .app-container {
             padding: 16px 12px !important;
@@ -875,7 +875,7 @@ export default function App() {
                       <td style={styles.td}>
                         {renderizarCelulaSimplificada(
                           Object.keys(linha)
-                            .filter(k => k.toLowerCase().includes('esportes') || k.toLowerCase().includes('jogos'))
+                            .filter(k => isColunaModalidade(k))
                             .map(k => linha[k])
                             .filter(Boolean)
                             .join(', '), 
