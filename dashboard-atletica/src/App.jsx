@@ -101,6 +101,68 @@ const obterValorPorChave = (atleta, palavrasChave) => {
   return chaveEncontrada ? atleta[chaveEncontrada] : '-';
 };
 
+// FUNÇÃO AUXILIAR DE AGRUPAMENTO E MESCLAGEM DE ENVIOS
+const agruparEMesclarAtletas = (dadosTratados) => {
+  const mapaAtletas = new Map();
+
+  dadosTratados.forEach((linha) => {
+    const keys = Object.keys(linha);
+    const colWhats = keys.find(c => c.toLowerCase().includes('whatsapp') || c.toLowerCase().includes('telefone'));
+    const colNome = keys.find(c => c.toLowerCase().includes('nome')) || keys[1] || keys[0];
+
+    const whats = (linha[colWhats] || '').replace(/\D/g, '');
+    const nome = (linha[colNome] || '').trim().toLowerCase();
+
+    // Chave única para rastrear o mesmo atleta
+    const chaveUnica = whats.length >= 8 ? whats : nome;
+
+    if (!chaveUnica) return;
+
+    if (!mapaAtletas.has(chaveUnica)) {
+      mapaAtletas.set(chaveUnica, {
+        ...linha,
+        _qtdEnvios: 1,
+        _teveAlteracaoDados: false,
+        _historicoEnvios: [linha]
+      });
+    } else {
+      const atletaExistente = mapaAtletas.get(chaveUnica);
+      atletaExistente._qtdEnvios += 1;
+      atletaExistente._historicoEnvios.push(linha);
+
+      // Checa divergência cadastral (Curso/Turno)
+      const colCurso = keys.find(c => c.toLowerCase().includes('curso'));
+      const colTurno = keys.find(c => c.toLowerCase().includes('turno'));
+
+      if (
+        (colCurso && linha[colCurso] && atletaExistente[colCurso] && linha[colCurso] !== atletaExistente[colCurso]) ||
+        (colTurno && linha[colTurno] && atletaExistente[colTurno] && linha[colTurno] !== atletaExistente[colTurno])
+      ) {
+        atletaExistente._teveAlteracaoDados = true;
+      }
+
+      // Mescla dos Esportes/Jogos
+      keys.forEach((col) => {
+        const colLower = col.toLowerCase();
+        if (colLower.includes('esportes') || colLower.includes('jogos') || colLower.includes('e-sports')) {
+          const antigo = atletaExistente[col] || '';
+          const novo = linha[col] || '';
+
+          const listaAntiga = antigo.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
+          const listaNova = novo.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
+
+          const unificados = Array.from(new Set([...listaAntiga, ...listaNova]));
+          atletaExistente[col] = unificados.join(', ');
+        } else if (linha[col] && (!atletaExistente[col] || atletaExistente[col] === '-')) {
+          atletaExistente[col] = linha[col];
+        }
+      });
+    }
+  });
+
+  return Array.from(mapaAtletas.values());
+};
+
 const renderizarCelulaSimplificada = (valor, nomeColuna) => {
   if (!valor || valor === '-' || valor.trim() === '') {
     return <span style={styles.badgeVazio}>—</span>;
@@ -129,13 +191,15 @@ const renderizarCelulaSimplificada = (valor, nomeColuna) => {
 
   if (colLower.includes('esportes') || colLower.includes('jogos') || colLower.includes('e-sports')) {
     const itens = valor.split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
+    const eJogoUnico = itens.length === 1;
+
     return (
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
         {itens.slice(0, 3).map((item, idx) => {
           const icone = REGRAS_MODALIDADES[item]?.icone || '🏆';
           return (
             <span key={idx} style={styles.badgeModalidade}>
-              {icone} {item}
+              {icone} {item} {eJogoUnico && '🎯'}
             </span>
           );
         })}
@@ -193,11 +257,14 @@ export default function App() {
             return linhaTratada;
           });
 
-          setDados(dadosTratados);
-          setColunas(Object.keys(dadosTratados[0]));
+          // APLICA A MESCLAGEM AUTOMÁTICA DE ATLETAS
+          const dadosAgrupados = agruparEMesclarAtletas(dadosTratados);
+
+          setDados(dadosAgrupados);
+          setColunas(Object.keys(dadosAgrupados[0] || {}));
 
           const categorias = {};
-          dadosTratados.forEach((atleta) => {
+          dadosAgrupados.forEach((atleta) => {
             Object.keys(atleta).forEach((coluna) => {
               if (
                 coluna.includes("Esportes") || 
@@ -775,7 +842,12 @@ export default function App() {
                       </td>
 
                       <td style={{ ...styles.td, fontWeight: '700', color: '#f8fafc' }}>
-                        {linha[colNome] || '-'}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>{linha[colNome] || '-'}</span>
+                          {linha._teveAlteracaoDados && (
+                            <span style={styles.badgeAlterado}>⚠️ Alterado</span>
+                          )}
+                        </div>
                       </td>
 
                       {colCurso && (
@@ -891,52 +963,52 @@ export default function App() {
                   </div>
                 </div>
 
-{/* Botões de Ação */}
-<div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '10px' }}>
-  <button
-    onClick={() => autoDistribuirTimes('random')}
-    style={{
-      ...styles.tabActive,
-      backgroundColor: '#8b5cf6',
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '6px',
-      whiteSpace: 'nowrap',
-      flex: '1'
-    }}
-  >
-    🎲 Random
-  </button>
+                {/* Botões de Ação */}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '10px' }}>
+                  <button
+                    onClick={() => autoDistribuirTimes('random')}
+                    style={{
+                      ...styles.tabActive,
+                      backgroundColor: '#8b5cf6',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      whiteSpace: 'nowrap',
+                      flex: '1'
+                    }}
+                  >
+                    🎲 Random
+                  </button>
 
-  <button
-    onClick={() => autoDistribuirTimes('curso')}
-    style={{
-      ...styles.tabActive,
-      backgroundColor: '#0284c7',
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '6px',
-      whiteSpace: 'nowrap',
-      flex: '1'
-    }}
-  >
-    🎓 Por Curso
-  </button>
+                  <button
+                    onClick={() => autoDistribuirTimes('curso')}
+                    style={{
+                      ...styles.tabActive,
+                      backgroundColor: '#0284c7',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      whiteSpace: 'nowrap',
+                      flex: '1'
+                    }}
+                  >
+                    🎓 Por Curso
+                  </button>
 
-  <button
-    onClick={limparEscalacao}
-    style={{
-      ...styles.tabInactive,
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-      color: '#ef4444',
-      whiteSpace: 'nowrap'
-    }}
-  >
-    Limpar
-  </button>
-</div>
+                  <button
+                    onClick={limparEscalacao}
+                    style={{
+                      ...styles.tabInactive,
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      color: '#ef4444',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Limpar
+                  </button>
+                </div>
 
               </div>
             </div>
@@ -1109,6 +1181,12 @@ export default function App() {
                 <button style={styles.btnClose} onClick={() => setAtletaSelecionado(null)}>✕</button>
               </div>
 
+              {atletaSelecionado._teveAlteracaoDados && (
+                <div style={{ backgroundColor: 'rgba(234, 179, 8, 0.15)', border: '1px solid rgba(234, 179, 8, 0.3)', padding: '10px 14px', borderRadius: '8px', marginBottom: '16px', color: '#fde047', fontSize: '12px' }}>
+                  ⚠️ <strong>Atenção:</strong> Este atleta enviou mais de um formulário com divergência em dados de Curso/Turno. Os jogos foram mesclados.
+                </div>
+              )}
+
               <div style={styles.modalGridInfo}>
                 <div>
                   <span style={styles.labelInfo}>Curso</span>
@@ -1148,7 +1226,8 @@ export default function App() {
                       colLower.includes('whatsapp') ||
                       colLower.includes('telefone') ||
                       colLower.includes('instagram') ||
-                      colLower.includes('carimbo')
+                      colLower.includes('carimbo') ||
+                      col.startsWith('_')
                     ) {
                       return null;
                     }
@@ -1183,7 +1262,7 @@ export default function App() {
   );
 }
 
-// ESTILOS BASE (MANTÉM O DESIGN NO PC E ADAPTA NO MOBILE)
+// ESTILOS BASE
 const styles = {
   appContainer: {
     backgroundColor: '#070a12',
@@ -1658,6 +1737,15 @@ const styles = {
     fontWeight: '700',
     padding: '3px 6px',
     borderRadius: '5px',
+  },
+  badgeAlterado: {
+    backgroundColor: 'rgba(234, 179, 8, 0.15)',
+    color: '#fde047',
+    border: '1px solid rgba(234, 179, 8, 0.3)',
+    fontSize: '10px',
+    fontWeight: '700',
+    padding: '2px 6px',
+    borderRadius: '4px',
   },
   badgeVazio: {
     color: '#475569',
