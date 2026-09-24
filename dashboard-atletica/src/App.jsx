@@ -39,6 +39,14 @@ const REGRAS_MODALIDADES = {
   'PUBG: BATTLEGROUNDS': { icone: '🪖', tamPadrao: 4 },
 };
 
+// CORES IDENTIFICADORAS DOS CURSOS DA FATEC RP
+const CORES_CURSOS = {
+  'ADS': { bg: 'rgba(56, 189, 248, 0.15)', text: '#38bdf8', border: 'rgba(56, 189, 248, 0.4)' },
+  'GNI': { bg: 'rgba(168, 85, 247, 0.15)', text: '#c084fc', border: 'rgba(168, 85, 247, 0.4)' },
+  'SBM': { bg: 'rgba(34, 197, 94, 0.15)', text: '#4ade80', border: 'rgba(34, 197, 94, 0.4)' },
+  'GRH': { bg: 'rgba(249, 115, 22, 0.15)', text: '#fb923c', border: 'rgba(249, 115, 22, 0.4)' },
+};
+
 // --- HELPER PADRONIZADO PARA IDENTIFICAR COLUNAS DE JOGOS/ESPORTES ---
 const isColunaModalidade = (nomeColuna) => {
   if (!nomeColuna) return false;
@@ -191,7 +199,25 @@ const renderizarCelulaSimplificada = (valor, nomeColuna) => {
   }
 
   if (colLower.includes('curso')) {
-    return <span style={styles.badgeCurso}>{valor}</span>;
+    const valUpper = valor.toUpperCase();
+    let estiloCurso = styles.badgeCurso;
+    
+    Object.keys(CORES_CURSOS).forEach(sigla => {
+      if (valUpper.includes(sigla)) {
+        const c = CORES_CURSOS[sigla];
+        estiloCurso = {
+          backgroundColor: c.bg,
+          color: c.text,
+          border: `1px solid ${c.border}`,
+          fontSize: '11px',
+          fontWeight: '700',
+          padding: '4px 8px',
+          borderRadius: '6px',
+        };
+      }
+    });
+
+    return <span style={estiloCurso}>{valor}</span>;
   }
 
   if (colLower.includes('whatsapp') || colLower.includes('telefone')) {
@@ -225,6 +251,53 @@ const renderizarCelulaSimplificada = (valor, nomeColuna) => {
   return <span>{valor}</span>;
 };
 
+// HELPER PARA CALCULAR ESTATÍSTICAS PROCESSADAS A PARTIR DE UMA LISTA DE ATLETAS
+const calcularEstatisticas = (listaAtletas) => {
+  const categorias = {};
+  listaAtletas.forEach((atleta) => {
+    Object.keys(atleta).forEach((coluna) => {
+      if (isColunaModalidade(coluna)) {
+        const nomeCategoria = coluna.trim();
+        if (!categorias[nomeCategoria]) {
+          categorias[nomeCategoria] = {
+            itens: {},
+            atletasUnicosSet: new Set()
+          };
+        }
+
+        const valor = atleta[coluna];
+        if (valor && valor !== '-' && valor.trim() !== '') {
+          const itens = valor.split(/[,;\n]/).map((item) => item.trim());
+          let teveEscolhaNaCategoria = false;
+
+          itens.forEach((itemRaw) => {
+            if (!itemRaw) return;
+            teveEscolhaNaCategoria = true;
+            const chaveLower = itemRaw.toLowerCase();
+            const nomeFormatado = MAPA_NORMALIZACAO[chaveLower] || itemRaw;
+            categorias[nomeCategoria].itens[nomeFormatado] = (categorias[nomeCategoria].itens[nomeFormatado] || 0) + 1;
+          });
+
+          if (teveEscolhaNaCategoria) {
+            const idAtleta = atleta[Object.keys(atleta)[0]] || JSON.stringify(atleta);
+            categorias[nomeCategoria].atletasUnicosSet.add(idAtleta);
+          }
+        }
+      }
+    });
+  });
+
+  const estatisticasProcessadas = {};
+  Object.entries(categorias).forEach(([catNome, obj]) => {
+    estatisticasProcessadas[catNome] = {
+      itens: obj.itens,
+      atletasUnicos: obj.atletasUnicosSet.size
+    };
+  });
+
+  return estatisticasProcessadas;
+};
+
 export default function App() {
   const [dados, setDados] = useState([]);
   const [colunas, setColunas] = useState([]);
@@ -234,6 +307,10 @@ export default function App() {
   const [atletaSelecionado, setAtletaSelecionado] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
+
+  // Filtros da Aba "Resumo" (Inscrições por Modalidade)
+  const [filtroResumoCurso, setFiltroResumoCurso] = useState('TODOS');
+  const [filtroResumoTurno, setFiltroResumoTurno] = useState('TODOS');
 
   // Estados da aba de Montar Times
   const [modalidadeSelecionada, setModalidadeSelecionada] = useState('Vôlei');
@@ -273,50 +350,7 @@ export default function App() {
 
           setDados(dadosAgrupados);
           setColunas(Object.keys(dadosAgrupados[0] || {}));
-
-          const categorias = {};
-          dadosAgrupados.forEach((atleta) => {
-            Object.keys(atleta).forEach((coluna) => {
-              if (isColunaModalidade(coluna)) {
-                const nomeCategoria = coluna.trim();
-                if (!categorias[nomeCategoria]) {
-                  categorias[nomeCategoria] = {
-                    itens: {},
-                    atletasUnicosSet: new Set()
-                  };
-                }
-
-                const valor = atleta[coluna];
-                if (valor && valor !== '-' && valor.trim() !== '') {
-                  const itens = valor.split(/[,;\n]/).map((item) => item.trim());
-                  let teveEscolhaNaCategoria = false;
-
-                  itens.forEach((itemRaw) => {
-                    if (!itemRaw) return;
-                    teveEscolhaNaCategoria = true;
-                    const chaveLower = itemRaw.toLowerCase();
-                    const nomeFormatado = MAPA_NORMALIZACAO[chaveLower] || itemRaw;
-                    categorias[nomeCategoria].itens[nomeFormatado] = (categorias[nomeCategoria].itens[nomeFormatado] || 0) + 1;
-                  });
-
-                  if (teveEscolhaNaCategoria) {
-                    const idAtleta = atleta[Object.keys(atleta)[0]] || JSON.stringify(atleta);
-                    categorias[nomeCategoria].atletasUnicosSet.add(idAtleta);
-                  }
-                }
-              }
-            });
-          });
-
-          const estatisticasProcessadas = {};
-          Object.entries(categorias).forEach(([catNome, obj]) => {
-            estatisticasProcessadas[catNome] = {
-              itens: obj.itens,
-              atletasUnicos: obj.atletasUnicosSet.size
-            };
-          });
-
-          setEstatisticas(estatisticasProcessadas);
+          setEstatisticas(calcularEstatisticas(dadosAgrupados));
         } else {
           setErro("Nenhum dado encontrado na planilha.");
         }
@@ -345,6 +379,27 @@ export default function App() {
       String(val).toLowerCase().includes(busca)
     );
   });
+
+  const colNome = colunas.find(c => c.toLowerCase().includes('nome')) || colunas[1] || colunas[0];
+  const colCurso = colunas.find(c => c.toLowerCase().includes('curso'));
+  const colTurno = colunas.find(c => c.toLowerCase().includes('turno'));
+  const colWhats = colunas.find(c => c.toLowerCase().includes('whatsapp') || c.toLowerCase().includes('telefone'));
+  const colCarimbo = colunas.find(c => c.toLowerCase().includes('carimbo') || c.toLowerCase().includes('data'));
+
+  // ATLETAS FILTRADOS PARA A ABA "RESUMO"
+  const atletasResumoFiltrados = dados.filter((atleta) => {
+    if (filtroResumoCurso !== 'TODOS') {
+      const valCurso = (colCurso ? atleta[colCurso] : '').toLowerCase();
+      if (!valCurso.includes(filtroResumoCurso.toLowerCase())) return false;
+    }
+    if (filtroResumoTurno !== 'TODOS') {
+      const valTurno = (colTurno ? atleta[colTurno] : '').toLowerCase();
+      if (!valTurno.includes(filtroResumoTurno.toLowerCase())) return false;
+    }
+    return true;
+  });
+
+  const estatisticasResumo = calcularEstatisticas(atletasResumoFiltrados);
 
   const obterDestaquesApresentacao = () => {
     let topGeral = { nome: '-', qtd: 0, cat: '-' };
@@ -380,12 +435,6 @@ export default function App() {
     );
   }
 
-  const colNome = colunas.find(c => c.toLowerCase().includes('nome')) || colunas[1] || colunas[0];
-  const colCurso = colunas.find(c => c.toLowerCase().includes('curso'));
-  const colTurno = colunas.find(c => c.toLowerCase().includes('turno'));
-  const colWhats = colunas.find(c => c.toLowerCase().includes('whatsapp') || c.toLowerCase().includes('telefone'));
-  const colCarimbo = colunas.find(c => c.toLowerCase().includes('carimbo') || c.toLowerCase().includes('data'));
-
   const listaModalidadesUnicas = Array.from(
     new Set(Object.values(estatisticas).flatMap(cat => Object.keys(cat.itens)))
   ).sort();
@@ -407,7 +456,7 @@ export default function App() {
   });
 
   const listaCursosDisponiveis = Array.from(
-    new Set(atletasDaModalidade.map(a => a[colCurso] || 'Outros').filter(Boolean))
+    new Set(dados.map(a => a[colCurso] || 'Outros').filter(Boolean))
   ).sort();
 
   const getIndexTimeAtleta = (nomeAtleta) => {
@@ -745,16 +794,93 @@ export default function App() {
         {/* ABA 2: RESUMO POR MODALIDADE */}
         {abaAtiva === 'geral' && (
           <section style={styles.section}>
-            <h2 style={styles.sectionTitle}>Inscrições por Modalidade</h2>
-            <p style={styles.sectionSubtitle}>
-              Comparativo detalhado de escolhas por modalidade
-            </p>
+            
+            {/* CABEÇALHO DO RESUMO COM FILTROS NA DIREITA */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '16px',
+              marginBottom: '20px'
+            }}>
+              <div>
+                <h2 style={styles.sectionTitle}>Inscrições por Modalidade</h2>
+                <p style={{ ...styles.sectionSubtitle, margin: 0 }}>
+                  Comparativo detalhado de escolhas por modalidade
+                  {(filtroResumoCurso !== 'TODOS' || filtroResumoTurno !== 'TODOS') && (
+                    <span style={{ color: '#ef4444', marginLeft: '6px', fontWeight: '700' }}>
+                      ({atletasResumoFiltrados.length} atletas filtrados)
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              {/* BOTÕES/SELECTS DE FILTRO NA DIREITA DO TÍTULO */}
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <select
+                  value={filtroResumoCurso}
+                  onChange={(e) => setFiltroResumoCurso(e.target.value)}
+                  style={{
+                    ...styles.searchInput,
+                    padding: '8px 12px',
+                    fontSize: '12px',
+                    backgroundColor: '#0b1220',
+                    cursor: 'pointer',
+                    border: '1px solid rgba(255, 255, 255, 0.2)'
+                  }}
+                >
+                  <option value="TODOS">🎓 Todos os Cursos</option>
+                  {listaCursosDisponiveis.map((c, i) => (
+                    <option key={i} value={c} style={{ backgroundColor: '#0f172a' }}>{c}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={filtroResumoTurno}
+                  onChange={(e) => setFiltroResumoTurno(e.target.value)}
+                  style={{
+                    ...styles.searchInput,
+                    padding: '8px 12px',
+                    fontSize: '12px',
+                    backgroundColor: '#0b1220',
+                    cursor: 'pointer',
+                    border: '1px solid rgba(255, 255, 255, 0.2)'
+                  }}
+                >
+                  <option value="TODOS">⏰ Todos os Turnos</option>
+                  <option value="matutino" style={{ backgroundColor: '#0f172a' }}>☀️ Matutino</option>
+                  <option value="noturno" style={{ backgroundColor: '#0f172a' }}>🌙 Noturno</option>
+                </select>
+
+                {(filtroResumoCurso !== 'TODOS' || filtroResumoTurno !== 'TODOS') && (
+                  <button
+                    onClick={() => {
+                      setFiltroResumoCurso('TODOS');
+                      setFiltroResumoTurno('TODOS');
+                    }}
+                    style={{
+                      ...styles.tabInactive,
+                      padding: '8px 12px',
+                      fontSize: '11px',
+                      backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                      color: '#ef4444',
+                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                      borderRadius: '8px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✕ Limpar
+                  </button>
+                )}
+              </div>
+            </div>
 
             <div style={styles.gridCategorias} className="grid-responsive">
-              {Object.entries(estatisticas).map(([categoriaNome, dataObj], idx) => {
+              {Object.entries(estatisticasResumo).map(([categoriaNome, dataObj], idx) => {
                 const listaItens = dataObj.itens;
                 const totalCategoria = Object.values(listaItens).reduce((a, b) => a + b, 0);
-                const maxQtd = Math.max(...Object.values(listaItens));
+                const maxQtd = Math.max(...Object.values(listaItens), 1);
 
                 return (
                   <div key={idx} style={styles.cardCategoria}>
@@ -767,27 +893,33 @@ export default function App() {
                     </div>
 
                     <div style={styles.listaModalidadesRefinada}>
-                      {Object.entries(listaItens)
-                        .sort(([, a], [, b]) => b - a)
-                        .map(([itemNome, qtd], i) => {
-                          const porcentagem = Math.round((qtd / maxQtd) * 100);
-                          const icone = REGRAS_MODALIDADES[itemNome]?.icone || '🏆';
+                      {Object.keys(listaItens).length === 0 ? (
+                        <p style={{ color: '#64748b', fontSize: '12px', padding: '10px 0', textAlign: 'center', margin: 0 }}>
+                          Nenhuma inscrição encontrada com este filtro.
+                        </p>
+                      ) : (
+                        Object.entries(listaItens)
+                          .sort(([, a], [, b]) => b - a)
+                          .map(([itemNome, qtd], i) => {
+                            const porcentagem = Math.round((qtd / maxQtd) * 100);
+                            const icone = REGRAS_MODALIDADES[itemNome]?.icone || '🏆';
 
-                          return (
-                            <div key={i} style={styles.itemModalidadeRow}>
-                              <div 
-                                style={{ 
-                                  ...styles.itemModalidadeBar, 
-                                  width: `${porcentagem}%` 
-                                }} 
-                              />
-                              <span style={styles.itemModalidadeNome}>
-                                {icone} {itemNome}
-                              </span>
-                              <span style={styles.itemModalidadeBadge}>{qtd}</span>
-                            </div>
-                          );
-                        })}
+                            return (
+                              <div key={i} style={styles.itemModalidadeRow}>
+                                <div 
+                                  style={{ 
+                                    ...styles.itemModalidadeBar, 
+                                    width: `${porcentagem}%` 
+                                  }} 
+                                />
+                                <span style={styles.itemModalidadeNome}>
+                                  {icone} {itemNome}
+                                </span>
+                                <span style={styles.itemModalidadeBadge}>{qtd}</span>
+                              </div>
+                            );
+                          })
+                      )}
                     </div>
                   </div>
                 );
