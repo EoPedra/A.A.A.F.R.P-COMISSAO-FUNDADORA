@@ -194,13 +194,17 @@ const renderizarCelulaSimplificada = (valor, nomeColuna) => {
     const eJogoUnico = itens.length === 1;
 
     return (
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
         {itens.slice(0, 3).map((item, idx) => {
           const icone = REGRAS_MODALIDADES[item]?.icone || '🏆';
           return (
-            <span key={idx} style={styles.badgeModalidade}>
-              {icone} {item} {eJogoUnico && '🎯'}
-            </span>
+            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {/* Ícone fora da tag quando for jogo único */}
+              {eJogoUnico && <span title="Inscrição Exclusiva" style={{ fontSize: '13px' }}>🎯</span>}
+              <span style={styles.badgeModalidade}>
+                {icone} {item}
+              </span>
+            </div>
           );
         })}
         {itens.length > 3 && (
