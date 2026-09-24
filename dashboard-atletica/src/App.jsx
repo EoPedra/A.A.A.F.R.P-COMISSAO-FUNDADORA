@@ -47,7 +47,7 @@ const CORES_CURSOS = {
   'GRH': { bg: 'rgba(249, 115, 22, 0.15)', text: '#fb923c', border: 'rgba(249, 115, 22, 0.4)' },
 };
 
-// --- HELPER PADRONIZADO PARA IDENTIFICAR COLUNAS DE JOGOS/ESPORTES ---
+// HELPER PARA IDENTIFICAR COLUNAS DE JOGOS/ESPORTES
 const isColunaModalidade = (nomeColuna) => {
   if (!nomeColuna) return false;
   const colLower = nomeColuna.toLowerCase();
@@ -122,7 +122,7 @@ const obterValorPorChave = (atleta, palavrasChave) => {
   return chaveEncontrada ? atleta[chaveEncontrada] : '-';
 };
 
-// FUNÇÃO AUXILIAR DE AGRUPAMENTO E MESCLAGEM DE ENVIOS
+// AGRUPAMENTO E MESCLAGEM DE ENVIOS DUPLICADOS
 const agruparEMesclarAtletas = (dadosTratados) => {
   const mapaAtletas = new Map();
 
@@ -251,7 +251,7 @@ const renderizarCelulaSimplificada = (valor, nomeColuna) => {
   return <span>{valor}</span>;
 };
 
-// HELPER PARA CALCULAR ESTATÍSTICAS PROCESSADAS A PARTIR DE UMA LISTA DE ATLETAS
+// CÁLCULO DAS ESTATÍSTICAS
 const calcularEstatisticas = (listaAtletas) => {
   const categorias = {};
   listaAtletas.forEach((atleta) => {
@@ -308,11 +308,11 @@ export default function App() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
 
-  // Filtros da Aba "Resumo" (Inscrições por Modalidade)
+  // Filtros da Aba "Resumo"
   const [filtroResumoCurso, setFiltroResumoCurso] = useState('TODOS');
   const [filtroResumoTurno, setFiltroResumoTurno] = useState('TODOS');
 
-  // Estados da aba de Montar Times
+  // Estados de Montar Times
   const [modalidadeSelecionada, setModalidadeSelecionada] = useState('Vôlei');
   const [tamanhoPorTime, setTamanhoPorTime] = useState(6);
   const [filtroCursoTime, setFiltroCursoTime] = useState('TODOS');
@@ -382,11 +382,11 @@ export default function App() {
 
   const colNome = colunas.find(c => c.toLowerCase().includes('nome')) || colunas[1] || colunas[0];
   const colCurso = colunas.find(c => c.toLowerCase().includes('curso'));
-  const colTurno = colunas.find(c => c.toLowerCase().includes('turno'));
+  const colTurno = colunas.find(c => c.toLowerCase().includes('turno') || c.toLowerCase().includes('período') || c.toLowerCase().includes('periodo'));
   const colWhats = colunas.find(c => c.toLowerCase().includes('whatsapp') || c.toLowerCase().includes('telefone'));
   const colCarimbo = colunas.find(c => c.toLowerCase().includes('carimbo') || c.toLowerCase().includes('data'));
 
-  // ATLETAS FILTRADOS PARA A ABA "RESUMO"
+  // ATLETAS FILTRADOS PARA A ABA "RESUMO" (COM TRATAMENTO DE TURNO CORRIGIDO)
   const atletasResumoFiltrados = dados.filter((atleta) => {
     if (filtroResumoCurso !== 'TODOS') {
       const valCurso = (colCurso ? atleta[colCurso] : '').toLowerCase();
@@ -394,7 +394,15 @@ export default function App() {
     }
     if (filtroResumoTurno !== 'TODOS') {
       const valTurno = (colTurno ? atleta[colTurno] : '').toLowerCase();
-      if (!valTurno.includes(filtroResumoTurno.toLowerCase())) return false;
+      const buscaTurno = filtroResumoTurno.toLowerCase();
+      
+      if (buscaTurno === 'matutino') {
+        if (!valTurno.includes('matutino') && !valTurno.includes('manhã') && !valTurno.includes('manha')) return false;
+      } else if (buscaTurno === 'noturno') {
+        if (!valTurno.includes('noturno') && !valTurno.includes('noite')) return false;
+      } else {
+        if (!valTurno.includes(buscaTurno)) return false;
+      }
     }
     return true;
   });
@@ -559,6 +567,18 @@ export default function App() {
     setTimeout(() => setCopiado(false), 2000);
   };
 
+  // Helper para resgatar a cor do curso filtrado se houver
+  const getCorCursoFiltrado = () => {
+    if (filtroResumoCurso === 'TODOS') return null;
+    const sigla = filtroResumoCurso.toUpperCase();
+    for (const key of Object.keys(CORES_CURSOS)) {
+      if (sigla.includes(key)) return CORES_CURSOS[key];
+    }
+    return null;
+  };
+
+  const corCursoAtual = getCorCursoFiltrado();
+
   return (
     <div style={styles.appContainer} className="app-container">
       <style>{`
@@ -691,7 +711,7 @@ export default function App() {
           </div>
         </header>
 
-        {/* ABA 1: GRÁFICOS */}
+        {/* ABA 1: APRESENTAÇÃO / GRÁFICOS */}
         {abaAtiva === 'graficos' && (
           <section style={styles.section}>
             <div style={styles.kpiGrid} className="grid-responsive">
@@ -791,7 +811,7 @@ export default function App() {
           </section>
         )}
 
-        {/* ABA 2: RESUMO POR MODALIDADE */}
+        {/* ABA 2: RESUMO POR MODALIDADE (COM BOTÕES DE FILTRO NA DIREITA DO TÍTULO E CORES DE CURSO) */}
         {abaAtiva === 'geral' && (
           <section style={styles.section}>
             
@@ -809,14 +829,14 @@ export default function App() {
                 <p style={{ ...styles.sectionSubtitle, margin: 0 }}>
                   Comparativo detalhado de escolhas por modalidade
                   {(filtroResumoCurso !== 'TODOS' || filtroResumoTurno !== 'TODOS') && (
-                    <span style={{ color: '#ef4444', marginLeft: '6px', fontWeight: '700' }}>
+                    <span style={{ color: corCursoAtual ? corCursoAtual.text : '#ef4444', marginLeft: '6px', fontWeight: '700' }}>
                       ({atletasResumoFiltrados.length} atletas filtrados)
                     </span>
                   )}
                 </p>
               </div>
 
-              {/* BOTÕES/SELECTS DE FILTRO NA DIREITA DO TÍTULO */}
+              {/* BOTÕES/SELECTS DE FILTRO NO ESPAÇO À DIREITA DO TÍTULO */}
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <select
                   value={filtroResumoCurso}
@@ -825,14 +845,16 @@ export default function App() {
                     ...styles.searchInput,
                     padding: '8px 12px',
                     fontSize: '12px',
-                    backgroundColor: '#0b1220',
-                    cursor: 'pointer',
-                    border: '1px solid rgba(255, 255, 255, 0.2)'
+                    backgroundColor: corCursoAtual ? corCursoAtual.bg : '#0b1220',
+                    color: corCursoAtual ? corCursoAtual.text : '#f8fafc',
+                    borderColor: corCursoAtual ? corCursoAtual.border : 'rgba(255, 255, 255, 0.2)',
+                    fontWeight: '600',
+                    cursor: 'pointer'
                   }}
                 >
-                  <option value="TODOS">🎓 Todos os Cursos</option>
+                  <option value="TODOS" style={{ backgroundColor: '#0f172a', color: '#fff' }}>🎓 Todos os Cursos</option>
                   {listaCursosDisponiveis.map((c, i) => (
-                    <option key={i} value={c} style={{ backgroundColor: '#0f172a' }}>{c}</option>
+                    <option key={i} value={c} style={{ backgroundColor: '#0f172a', color: '#fff' }}>{c}</option>
                   ))}
                 </select>
 
@@ -848,7 +870,7 @@ export default function App() {
                     border: '1px solid rgba(255, 255, 255, 0.2)'
                   }}
                 >
-                  <option value="TODOS">⏰ Todos os Turnos</option>
+                  <option value="TODOS" style={{ backgroundColor: '#0f172a' }}>⏰ Todos os Turnos</option>
                   <option value="matutino" style={{ backgroundColor: '#0f172a' }}>☀️ Matutino</option>
                   <option value="noturno" style={{ backgroundColor: '#0f172a' }}>🌙 Noturno</option>
                 </select>
@@ -883,7 +905,10 @@ export default function App() {
                 const maxQtd = Math.max(...Object.values(listaItens), 1);
 
                 return (
-                  <div key={idx} style={styles.cardCategoria}>
+                  <div key={idx} style={{
+                    ...styles.cardCategoria,
+                    borderColor: corCursoAtual ? corCursoAtual.border : 'rgba(255, 255, 255, 0.08)'
+                  }}>
                     <div style={styles.cardCategoriaHeader}>
                       <h3 style={styles.cardCategoriaTitle}>{categoriaNome}</h3>
                       <div style={styles.metricaDuplaBox}>
@@ -909,13 +934,21 @@ export default function App() {
                                 <div 
                                   style={{ 
                                     ...styles.itemModalidadeBar, 
-                                    width: `${porcentagem}%` 
+                                    width: `${porcentagem}%`,
+                                    backgroundColor: corCursoAtual ? corCursoAtual.bg : 'rgba(239, 68, 68, 0.12)'
                                   }} 
                                 />
                                 <span style={styles.itemModalidadeNome}>
                                   {icone} {itemNome}
                                 </span>
-                                <span style={styles.itemModalidadeBadge}>{qtd}</span>
+                                <span style={{
+                                  ...styles.itemModalidadeBadge,
+                                  color: corCursoAtual ? corCursoAtual.text : '#ef4444',
+                                  backgroundColor: corCursoAtual ? corCursoAtual.bg : 'rgba(239, 68, 68, 0.15)',
+                                  borderColor: corCursoAtual ? corCursoAtual.border : 'rgba(239, 68, 68, 0.3)'
+                                }}>
+                                  {qtd}
+                                </span>
                               </div>
                             );
                           })
@@ -1330,7 +1363,7 @@ export default function App() {
                 </div>
                 <div>
                   <span style={styles.labelInfo}>Turno</span>
-                  <p style={styles.valInfo}>{obterValorPorChave(atletaSelecionado, ['turno'])}</p>
+                  <p style={styles.valInfo}>{obterValorPorChave(atletaSelecionado, ['turno', 'período', 'periodo'])}</p>
                 </div>
                 <div>
                   <span style={styles.labelInfo}>WhatsApp</span>
@@ -1359,6 +1392,8 @@ export default function App() {
                       colLower.includes('nome') ||
                       colLower.includes('curso') ||
                       colLower.includes('turno') ||
+                      colLower.includes('período') ||
+                      colLower.includes('periodo') ||
                       colLower.includes('whatsapp') ||
                       colLower.includes('telefone') ||
                       colLower.includes('instagram') ||
@@ -1701,6 +1736,7 @@ const styles = {
     borderRadius: '14px',
     border: '1px solid rgba(255, 255, 255, 0.08)',
     padding: '20px',
+    transition: 'border-color 0.3s ease',
   },
   cardCategoriaHeader: {
     display: 'flex',
@@ -1741,8 +1777,8 @@ const styles = {
     left: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    transition: 'width 0.4s ease',
+    borderRadius: '8px 0 0 8px',
+    transition: 'width 0.4s ease, background-color 0.3s ease',
   },
   itemModalidadeNome: {
     position: 'relative',
@@ -1756,11 +1792,10 @@ const styles = {
     zIndex: 1,
     fontSize: '11px',
     fontWeight: '700',
-    color: '#ef4444',
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    border: '1px solid rgba(239, 68, 68, 0.3)',
+    border: '1px solid',
     padding: '2px 8px',
     borderRadius: '12px',
+    transition: 'all 0.3s ease',
   },
 
   // Tabela
