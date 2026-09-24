@@ -891,47 +891,52 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Botões de Ação */}
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '10px' }}>
-                  <button
-                    onClick={() => autoDistribuirTimes('random')}
-                    style={{
-                      ...styles.tabActive,
-                      backgroundColor: '#8b5cf6',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      flex: '1'
-                    }}
-                  >
-                    🎲 Random
-                  </button>
+{/* Botões de Ação */}
+<div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '10px' }}>
+  <button
+    onClick={() => autoDistribuirTimes('random')}
+    style={{
+      ...styles.tabActive,
+      backgroundColor: '#8b5cf6',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '6px',
+      whiteSpace: 'nowrap',
+      flex: '1'
+    }}
+  >
+    🎲 Random
+  </button>
 
-                  <button
-                    onClick={() => autoDistribuirTimes('curso')}
-                    style={{
-                      ...styles.tabActive,
-                      backgroundColor: '#0284c7',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      flex: '1'
-                    }}
-                  >
-                    🎓 Por Curso
-                  </button>
+  <button
+    onClick={() => autoDistribuirTimes('curso')}
+    style={{
+      ...styles.tabActive,
+      backgroundColor: '#0284c7',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '6px',
+      whiteSpace: 'nowrap',
+      flex: '1'
+    }}
+  >
+    🎓 Por Curso
+  </button>
 
-                  <button
-                    onClick={limparEscalacao}
-                    style={{
-                      ...styles.tabInactive,
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      color: '#ef4444'
-                    }}
-                  >
-                    Limpar
-                  </button>
-                </div>
+  <button
+    onClick={limparEscalacao}
+    style={{
+      ...styles.tabInactive,
+      border: '1px solid rgba(255, 255, 255, 0.1)',
+      color: '#ef4444',
+      whiteSpace: 'nowrap'
+    }}
+  >
+    Limpar
+  </button>
+</div>
 
               </div>
             </div>
