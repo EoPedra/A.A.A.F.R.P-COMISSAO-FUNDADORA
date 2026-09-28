@@ -37,6 +37,7 @@ const REGRAS_MODALIDADES = {
   'Dota': { icone: '🛡️', tamPadrao: 5 },
   'Marvel Rivals': { icone: '🦸', tamPadrao: 6 },
   'PUBG: BATTLEGROUNDS': { icone: '🪖', tamPadrao: 4 },
+  'Minecraft': { icone: '⛏️'},
 };
 
 // CORES IDENTIFICADORAS DOS CURSOS DA FATEC RP
