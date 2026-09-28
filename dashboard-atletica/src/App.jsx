@@ -50,6 +50,8 @@ const CORES_CURSOS = {
 // HELPER PARA IDENTIFICAR COLUNAS DE JOGOS/ESPORTES
 const isColunaModalidade = (nomeColuna) => {
   if (!nomeColuna) return false;
+  // SE QUISER BLOQUEAR UMA COLUNA ESPECÍFICA AQUI:
+  if (nomeColuna.includes("Descreva abaixo qualquer sugestão ou ideia que não tenha sido contemplada nas perguntas anteriores, como jogos de qualquer categoria, atividades culturais, clubes, grupos de estudo, eventos, projetos ou outras iniciativas que possam contribuir para a integração e o desenvolvimento dos participantes!")) return false;
   const colLower = nomeColuna.toLowerCase();
   return (
     colLower.includes('esporte') ||
