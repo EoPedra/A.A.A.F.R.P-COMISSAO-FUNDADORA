@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Papa from 'papaparse';
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZHcDYLZ8KaN2-JD0sKpnZHj_Jz0Udxl1SmGeoGEtd7GnvzWnGHNd2BH7zFiG3FHNl6f6YaJfkD7ul/pub?output=csv";
@@ -54,8 +54,8 @@ const isColunaModalidade = (nomeColuna) => {
 
   const colLower = nomeColuna.toLowerCase();
 
-  // BLOQUEAR COLUNAS ESPECÍFICAS AQUI:
-  if (colLower.includes('sugestão') || colLower.includes('ideia')) {
+  // BLOQUEAR COLUNAS ESPECÍFICAS AQUI (ex: Sugestões / Coluna O):
+  if (colLower.includes('sugestão') || colLower.includes('ideia') || colLower.includes('contribui')) {
     return false;
   }
 
@@ -66,7 +66,8 @@ const isColunaModalidade = (nomeColuna) => {
     colLower.includes('jogo') ||
     colLower.includes('modalidade')
   );
-}
+};
+
 // --- FUNÇÕES DE HIGIENIZAÇÃO ---
 
 const formatarWhatsApp = (val) => {
@@ -316,7 +317,7 @@ export default function App() {
   const [erro, setErro] = useState(null);
 
   // Filtros da Aba "Resumo"
-  const [filtroResumoCurso, setFiltroResumoCurso] = useState('TODOS');
+  const [cursosSelecionadosResumo, setCursosSelecionadosResumo] = useState([]);
   const [filtroResumoTurno, setFiltroResumoTurno] = useState('TODOS');
 
   // Estados de Montar Times
@@ -356,8 +357,17 @@ export default function App() {
           const dadosAgrupados = agruparEMesclarAtletas(dadosTratados);
 
           setDados(dadosAgrupados);
-          setColunas(Object.keys(dadosAgrupados[0] || {}));
+          const cols = Object.keys(dadosAgrupados[0] || {});
+          setColunas(cols);
           setEstatisticas(calcularEstatisticas(dadosAgrupados));
+
+          // Inicializar o filtro comparador com todos os cursos marcados
+          const colC = cols.find(c => c.toLowerCase().includes('curso'));
+          if (colC) {
+            const todosCursos = Array.from(new Set(dadosAgrupados.map(a => a[colC] || 'Outros').filter(Boolean)));
+            setCursosSelecionadosResumo(todosCursos);
+          }
+
         } else {
           setErro("Nenhum dado encontrado na planilha.");
         }
@@ -393,28 +403,55 @@ export default function App() {
   const colWhats = colunas.find(c => c.toLowerCase().includes('whatsapp') || c.toLowerCase().includes('telefone'));
   const colCarimbo = colunas.find(c => c.toLowerCase().includes('carimbo') || c.toLowerCase().includes('data'));
 
-  // ATLETAS FILTRADOS PARA A ABA "RESUMO" (COM TRATAMENTO DE TURNO CORRIGIDO)
-  const atletasResumoFiltrados = dados.filter((atleta) => {
-    if (filtroResumoCurso !== 'TODOS') {
-      const valCurso = (colCurso ? atleta[colCurso] : '').toLowerCase();
-      if (!valCurso.includes(filtroResumoCurso.toLowerCase())) return false;
-    }
-    if (filtroResumoTurno !== 'TODOS') {
-      const valTurno = (colTurno ? atleta[colTurno] : '').toLowerCase();
-      const buscaTurno = filtroResumoTurno.toLowerCase();
-      
-      if (buscaTurno === 'matutino') {
-        if (!valTurno.includes('matutino') && !valTurno.includes('manhã') && !valTurno.includes('manha')) return false;
-      } else if (buscaTurno === 'noturno') {
-        if (!valTurno.includes('noturno') && !valTurno.includes('noite')) return false;
-      } else {
-        if (!valTurno.includes(buscaTurno)) return false;
-      }
-    }
-    return true;
-  });
+  const listaCursosDisponiveis = useMemo(() => {
+    return Array.from(
+      new Set(dados.map(a => a[colCurso] || 'Outros').filter(Boolean))
+    ).sort();
+  }, [dados, colCurso]);
 
-  const estatisticasResumo = calcularEstatisticas(atletasResumoFiltrados);
+  // Função para alternar seleção dos chips de cursos
+  const toggleCursoResumo = (curso) => {
+    setCursosSelecionadosResumo(prev => 
+      prev.includes(curso) ? prev.filter(c => c !== curso) : [...prev, curso]
+    );
+  };
+
+  const selecionarTodosCursosResumo = () => setCursosSelecionadosResumo(listaCursosDisponiveis);
+  const limparCursosResumo = () => setCursosSelecionadosResumo([]);
+
+  // ATLETAS FILTRADOS PARA A ABA "RESUMO" COM COMPARADOR MULTI-SELEÇÃO
+  const atletasResumoFiltrados = useMemo(() => {
+    return dados.filter((atleta) => {
+      // Filtro de Curso (Comparador Múltiplo)
+      if (cursosSelecionadosResumo.length > 0) {
+        const valCurso = (colCurso ? atleta[colCurso] : '').toLowerCase();
+        const pertenceAAlgumCurso = cursosSelecionadosResumo.some(c => valCurso.includes(c.toLowerCase()));
+        if (!pertenceAAlgumCurso) return false;
+      } else {
+        return false; // Se não houver curso selecionado, desmarca todos
+      }
+
+      // Filtro de Turno
+      if (filtroResumoTurno !== 'TODOS') {
+        const valTurno = (colTurno ? atleta[colTurno] : '').toLowerCase();
+        const buscaTurno = filtroResumoTurno.toLowerCase();
+        
+        if (buscaTurno === 'matutino') {
+          if (!valTurno.includes('matutino') && !valTurno.includes('manhã') && !valTurno.includes('manha')) return false;
+        } else if (buscaTurno === 'noturno') {
+          if (!valTurno.includes('noturno') && !valTurno.includes('noite')) return false;
+        } else {
+          if (!valTurno.includes(buscaTurno)) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [dados, colCurso, colTurno, cursosSelecionadosResumo, filtroResumoTurno]);
+
+  const estatisticasResumo = useMemo(() => {
+    return calcularEstatisticas(atletasResumoFiltrados);
+  }, [atletasResumoFiltrados]);
 
   const obterDestaquesApresentacao = () => {
     let topGeral = { nome: '-', qtd: 0, cat: '-' };
@@ -469,10 +506,6 @@ export default function App() {
     const cursoAtleta = atleta[colCurso] || '';
     return cursoAtleta.toLowerCase().includes(filtroCursoTime.toLowerCase());
   });
-
-  const listaCursosDisponiveis = Array.from(
-    new Set(dados.map(a => a[colCurso] || 'Outros').filter(Boolean))
-  ).sort();
 
   const getIndexTimeAtleta = (nomeAtleta) => {
     for (let i = 0; i < qtdTimes; i++) {
@@ -573,18 +606,6 @@ export default function App() {
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2000);
   };
-
-  // Helper para resgatar a cor do curso filtrado se houver
-  const getCorCursoFiltrado = () => {
-    if (filtroResumoCurso === 'TODOS') return null;
-    const sigla = filtroResumoCurso.toUpperCase();
-    for (const key of Object.keys(CORES_CURSOS)) {
-      if (sigla.includes(key)) return CORES_CURSOS[key];
-    }
-    return null;
-  };
-
-  const corCursoAtual = getCorCursoFiltrado();
 
   return (
     <div style={styles.appContainer} className="app-container">
@@ -818,153 +839,184 @@ export default function App() {
           </section>
         )}
 
-        {/* ABA 2: RESUMO POR MODALIDADE (COM BOTÕES DE FILTRO NA DIREITA DO TÍTULO E CORES DE CURSO) */}
+        {/* ABA 2: RESUMO POR MODALIDADE (COM COMPARADOR MULTI-SELEÇÃO DE CURSOS) */}
         {abaAtiva === 'geral' && (
           <section style={styles.section}>
             
-            {/* CABEÇALHO DO RESUMO COM FILTROS NA DIREITA */}
+            {/* PAINEL COMPARADOR DE CURSOS (CHIPS DE SELEÇÃO MÚLTIPLA) */}
             <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '16px',
-              marginBottom: '20px'
+              backgroundColor: 'rgba(19, 28, 46, 0.75)',
+              backdropFilter: 'blur(12px)',
+              padding: '18px 22px',
+              borderRadius: '16px',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              marginBottom: '24px'
             }}>
-              <div>
-                <h2 style={styles.sectionTitle}>Inscrições por Modalidade</h2>
-                <p style={{ ...styles.sectionSubtitle, margin: 0 }}>
-                  Comparativo detalhado de escolhas por modalidade
-                  {(filtroResumoCurso !== 'TODOS' || filtroResumoTurno !== 'TODOS') && (
-                    <span style={{ color: corCursoAtual ? corCursoAtual.text : '#ef4444', marginLeft: '6px', fontWeight: '700' }}>
-                      ({atletasResumoFiltrados.length} atletas filtrados)
-                    </span>
-                  )}
-                </p>
-              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '15px', color: '#f8fafc', fontWeight: '700' }}>
+                    ⚖️ Comparador por Curso ({cursosSelecionadosResumo.length} de {listaCursosDisponiveis.length} selecionados)
+                  </h3>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                    Selecione quais cursos deseja visualizar e comparar lado a lado
+                  </p>
+                </div>
 
-              {/* BOTÕES/SELECTS DE FILTRO NO ESPAÇO À DIREITA DO TÍTULO */}
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <select
-                  value={filtroResumoCurso}
-                  onChange={(e) => setFiltroResumoCurso(e.target.value)}
-                  style={{
-                    ...styles.searchInput,
-                    padding: '8px 12px',
-                    fontSize: '12px',
-                    backgroundColor: corCursoAtual ? corCursoAtual.bg : '#0b1220',
-                    color: corCursoAtual ? corCursoAtual.text : '#f8fafc',
-                    borderColor: corCursoAtual ? corCursoAtual.border : 'rgba(255, 255, 255, 0.2)',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value="TODOS" style={{ backgroundColor: '#0f172a', color: '#fff' }}>🎓 Todos os Cursos</option>
-                  {listaCursosDisponiveis.map((c, i) => (
-                    <option key={i} value={c} style={{ backgroundColor: '#0f172a', color: '#fff' }}>{c}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={filtroResumoTurno}
-                  onChange={(e) => setFiltroResumoTurno(e.target.value)}
-                  style={{
-                    ...styles.searchInput,
-                    padding: '8px 12px',
-                    fontSize: '12px',
-                    backgroundColor: '#0b1220',
-                    cursor: 'pointer',
-                    border: '1px solid rgba(255, 255, 255, 0.2)'
-                  }}
-                >
-                  <option value="TODOS" style={{ backgroundColor: '#0f172a' }}>⏰ Todos os Turnos</option>
-                  <option value="matutino" style={{ backgroundColor: '#0f172a' }}>☀️ Matutino</option>
-                  <option value="noturno" style={{ backgroundColor: '#0f172a' }}>🌙 Noturno</option>
-                </select>
-
-                {(filtroResumoCurso !== 'TODOS' || filtroResumoTurno !== 'TODOS') && (
-                  <button
-                    onClick={() => {
-                      setFiltroResumoCurso('TODOS');
-                      setFiltroResumoTurno('TODOS');
-                    }}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <select
+                    value={filtroResumoTurno}
+                    onChange={(e) => setFiltroResumoTurno(e.target.value)}
                     style={{
-                      ...styles.tabInactive,
-                      padding: '8px 12px',
-                      fontSize: '11px',
-                      backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                      color: '#ef4444',
-                      border: '1px solid rgba(239, 68, 68, 0.4)',
-                      borderRadius: '8px',
-                      cursor: 'pointer'
+                      ...styles.searchInput,
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      backgroundColor: '#0b1220',
+                      cursor: 'pointer',
+                      border: '1px solid rgba(255, 255, 255, 0.2)'
                     }}
                   >
-                    ✕ Limpar
+                    <option value="TODOS" style={{ backgroundColor: '#0f172a' }}>⏰ Todos os Turnos</option>
+                    <option value="matutino" style={{ backgroundColor: '#0f172a' }}>☀️ Matutino</option>
+                    <option value="noturno" style={{ backgroundColor: '#0f172a' }}>🌙 Noturno</option>
+                  </select>
+
+                  <button
+                    onClick={selecionarTodosCursosResumo}
+                    style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                  >
+                    Marcar Todos
                   </button>
-                )}
+                  <span style={{ color: '#334155' }}>|</span>
+                  <button
+                    onClick={limparCursosResumo}
+                    style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                  >
+                    Limpar
+                  </button>
+                </div>
+              </div>
+
+              {/* CHIPS SELETORES DE CURSO */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {listaCursosDisponiveis.map((curso) => {
+                  const isSelected = cursosSelecionadosResumo.includes(curso);
+                  
+                  let corChip = { bg: 'rgba(56, 189, 248, 0.2)', text: '#38bdf8', border: '#38bdf8' };
+                  const sigla = curso.toUpperCase();
+                  Object.keys(CORES_CURSOS).forEach(key => {
+                    if (sigla.includes(key)) {
+                      corChip = {
+                        bg: CORES_CURSOS[key].bg,
+                        text: CORES_CURSOS[key].text,
+                        border: CORES_CURSOS[key].text
+                      };
+                    }
+                  });
+
+                  return (
+                    <button
+                      key={curso}
+                      onClick={() => toggleCursoResumo(curso)}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: '20px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        backgroundColor: isSelected ? corChip.bg : 'rgba(15, 23, 42, 0.6)',
+                        color: isSelected ? corChip.text : '#64748b',
+                        border: isSelected ? `1px solid ${corChip.border}` : '1px solid rgba(255, 255, 255, 0.08)'
+                      }}
+                    >
+                      <span style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: isSelected ? corChip.text : '#475569'
+                      }} />
+                      {curso}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            <div style={styles.gridCategorias} className="grid-responsive">
-              {Object.entries(estatisticasResumo).map(([categoriaNome, dataObj], idx) => {
-                const listaItens = dataObj.itens;
-                const totalCategoria = Object.values(listaItens).reduce((a, b) => a + b, 0);
-                const maxQtd = Math.max(...Object.values(listaItens), 1);
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h2 style={styles.sectionTitle}>Inscrições por Modalidade</h2>
+                <p style={styles.sectionSubtitle}>
+                  Visualizando <strong style={{ color: '#ef4444' }}>{atletasResumoFiltrados.length}</strong> atletas conforme filtros aplicados
+                </p>
+              </div>
+            </div>
 
-                return (
-                  <div key={idx} style={{
-                    ...styles.cardCategoria,
-                    borderColor: corCursoAtual ? corCursoAtual.border : 'rgba(255, 255, 255, 0.08)'
-                  }}>
-                    <div style={styles.cardCategoriaHeader}>
-                      <h3 style={styles.cardCategoriaTitle}>{categoriaNome}</h3>
-                      <div style={styles.metricaDuplaBox}>
-                        <span style={styles.badgeRefinado}>{dataObj.atletasUnicos} atletas únicos</span>
-                        <span style={styles.badgeBruto}>{totalCategoria} escolhas</span>
+            {cursosSelecionadosResumo.length === 0 ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', backgroundColor: 'rgba(19, 28, 46, 0.4)', borderRadius: '14px', border: '1px dashed rgba(255, 255, 255, 0.1)' }}>
+                Nenhum curso selecionado no comparador. Selecione ao menos um curso acima para visualizar os dados.
+              </div>
+            ) : (
+              <div style={styles.gridCategorias} className="grid-responsive">
+                {Object.entries(estatisticasResumo).map(([categoriaNome, dataObj], idx) => {
+                  const listaItens = dataObj.itens;
+                  const totalCategoria = Object.values(listaItens).reduce((a, b) => a + b, 0);
+                  const maxQtd = Math.max(...Object.values(listaItens), 1);
+
+                  return (
+                    <div key={idx} style={styles.cardCategoria}>
+                      <div style={styles.cardCategoriaHeader}>
+                        <h3 style={styles.cardCategoriaTitle}>{categoriaNome}</h3>
+                        <div style={styles.metricaDuplaBox}>
+                          <span style={styles.badgeRefinado}>{dataObj.atletasUnicos} atletas únicos</span>
+                          <span style={styles.badgeBruto}>{totalCategoria} escolhas</span>
+                        </div>
+                      </div>
+
+                      <div style={styles.listaModalidadesRefinada}>
+                        {Object.keys(listaItens).length === 0 ? (
+                          <p style={{ color: '#64748b', fontSize: '12px', padding: '10px 0', textAlign: 'center', margin: 0 }}>
+                            Nenhuma inscrição encontrada para esta combinação.
+                          </p>
+                        ) : (
+                          Object.entries(listaItens)
+                            .sort(([, a], [, b]) => b - a)
+                            .map(([itemNome, qtd], i) => {
+                              const porcentagem = Math.round((qtd / maxQtd) * 100);
+                              const icone = REGRAS_MODALIDADES[itemNome]?.icone || '🏆';
+
+                              return (
+                                <div key={i} style={styles.itemModalidadeRow}>
+                                  <div 
+                                    style={{ 
+                                      ...styles.itemModalidadeBar, 
+                                      width: `${porcentagem}%`,
+                                      backgroundColor: 'rgba(239, 68, 68, 0.12)'
+                                    }} 
+                                  />
+                                  <span style={styles.itemModalidadeNome}>
+                                    {icone} {itemNome}
+                                  </span>
+                                  <span style={{
+                                    ...styles.itemModalidadeBadge,
+                                    color: '#ef4444',
+                                    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                                    borderColor: 'rgba(239, 68, 68, 0.3)'
+                                  }}>
+                                    {qtd}
+                                  </span>
+                                </div>
+                              );
+                            })
+                        )}
                       </div>
                     </div>
-
-                    <div style={styles.listaModalidadesRefinada}>
-                      {Object.keys(listaItens).length === 0 ? (
-                        <p style={{ color: '#64748b', fontSize: '12px', padding: '10px 0', textAlign: 'center', margin: 0 }}>
-                          Nenhuma inscrição encontrada com este filtro.
-                        </p>
-                      ) : (
-                        Object.entries(listaItens)
-                          .sort(([, a], [, b]) => b - a)
-                          .map(([itemNome, qtd], i) => {
-                            const porcentagem = Math.round((qtd / maxQtd) * 100);
-                            const icone = REGRAS_MODALIDADES[itemNome]?.icone || '🏆';
-
-                            return (
-                              <div key={i} style={styles.itemModalidadeRow}>
-                                <div 
-                                  style={{ 
-                                    ...styles.itemModalidadeBar, 
-                                    width: `${porcentagem}%`,
-                                    backgroundColor: corCursoAtual ? corCursoAtual.bg : 'rgba(239, 68, 68, 0.12)'
-                                  }} 
-                                />
-                                <span style={styles.itemModalidadeNome}>
-                                  {icone} {itemNome}
-                                </span>
-                                <span style={{
-                                  ...styles.itemModalidadeBadge,
-                                  color: corCursoAtual ? corCursoAtual.text : '#ef4444',
-                                  backgroundColor: corCursoAtual ? corCursoAtual.bg : 'rgba(239, 68, 68, 0.15)',
-                                  borderColor: corCursoAtual ? corCursoAtual.border : 'rgba(239, 68, 68, 0.3)'
-                                }}>
-                                  {qtd}
-                                </span>
-                              </div>
-                            );
-                          })
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
         )}
 
