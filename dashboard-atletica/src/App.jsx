@@ -51,22 +51,8 @@ const CORES_CURSOS = {
 const isColunaModalidade = (nomeColuna) => {
   if (!nomeColuna) return false;
   // SE QUISER BLOQUEAR UMA COLUNA ESPECÍFICA AQUI:
-  const isColunaModalidade = (nomeColuna) => {
+  const isColunaModalidade = (nomeColuna) => {'Descreva abaixo'
   if (!nomeColuna) return false;
-  
-  // Bloqueia a Coluna O (e qualquer outra que fale de sugestões/ideias)
-  if (nomeColuna.toLowerCase().includes('sugestão') || nomeColuna.toLowerCase().includes('ideia')) {
-    return false;
-  }
-
-  const colLower = nomeColuna.toLowerCase();
-  return (
-    colLower.includes('esporte') ||
-    colLower.includes('esports') ||
-    colLower.includes('e-sports') ||
-    colLower.includes('jogo') ||
-    colLower.includes('modalidade')
-  );
 };
   const colLower = nomeColuna.toLowerCase();
   return (
