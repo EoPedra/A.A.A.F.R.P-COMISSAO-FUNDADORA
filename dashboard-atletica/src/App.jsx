@@ -51,7 +51,23 @@ const CORES_CURSOS = {
 const isColunaModalidade = (nomeColuna) => {
   if (!nomeColuna) return false;
   // SE QUISER BLOQUEAR UMA COLUNA ESPECÍFICA AQUI:
-  if (nomeColuna.includes("Descreva abaixo qualquer sugestão ou ideia que não tenha sido contemplada nas perguntas anteriores, como jogos de qualquer categoria, atividades culturais, clubes, grupos de estudo, eventos, projetos ou outras iniciativas que possam contribuir para a integração e o desenvolvimento dos participantes!")) return false;
+  const isColunaModalidade = (nomeColuna) => {
+  if (!nomeColuna) return false;
+  
+  // Bloqueia a Coluna O (e qualquer outra que fale de sugestões/ideias)
+  if (nomeColuna.toLowerCase().includes('sugestão') || nomeColuna.toLowerCase().includes('ideia')) {
+    return false;
+  }
+
+  const colLower = nomeColuna.toLowerCase();
+  return (
+    colLower.includes('esporte') ||
+    colLower.includes('esports') ||
+    colLower.includes('e-sports') ||
+    colLower.includes('jogo') ||
+    colLower.includes('modalidade')
+  );
+};
   const colLower = nomeColuna.toLowerCase();
   return (
     colLower.includes('esporte') ||
