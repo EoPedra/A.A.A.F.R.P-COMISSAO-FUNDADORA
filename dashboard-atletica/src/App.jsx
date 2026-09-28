@@ -50,11 +50,14 @@ const CORES_CURSOS = {
 // HELPER PARA IDENTIFICAR COLUNAS DE JOGOS/ESPORTES
 const isColunaModalidade = (nomeColuna) => {
   if (!nomeColuna) return false;
-  // SE QUISER BLOQUEAR UMA COLUNA ESPECÍFICA AQUI:
-  const isColunaModalidade = (nomeColuna) => {
-  if (!nomeColuna) return 'Descreva abaixo';
-};
+
   const colLower = nomeColuna.toLowerCase();
+
+  // BLOQUEAR COLUNAS ESPECÍFICAS AQUI:
+  if (colLower.includes('sugestão') || colLower.includes('ideia')) {
+    return false;
+  }
+
   return (
     colLower.includes('esporte') ||
     colLower.includes('esports') ||
@@ -62,8 +65,7 @@ const isColunaModalidade = (nomeColuna) => {
     colLower.includes('jogo') ||
     colLower.includes('modalidade')
   );
-};
-
+}
 // --- FUNÇÕES DE HIGIENIZAÇÃO ---
 
 const formatarWhatsApp = (val) => {
