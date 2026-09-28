@@ -51,8 +51,8 @@ const CORES_CURSOS = {
 const isColunaModalidade = (nomeColuna) => {
   if (!nomeColuna) return false;
   // SE QUISER BLOQUEAR UMA COLUNA ESPECÍFICA AQUI:
-  const isColunaModalidade = (nomeColuna) => {'Descreva abaixo'
-  if (!nomeColuna) return false;
+  const isColunaModalidade = (nomeColuna) => {
+  if (!nomeColuna) return 'Descreva abaixo';
 };
   const colLower = nomeColuna.toLowerCase();
   return (
