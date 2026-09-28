@@ -1126,7 +1126,7 @@ export default function App() {
             
             {/* PAINEL DE CONFIGURAÇÕES */}
             <div style={{ ...styles.cardGraficoPresentation, marginBottom: '20px', padding: '18px 24px' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyBetween: 'space-between', gap: '16px' }} className="config-panel-responsive">
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }} className="config-panel-responsive">
                 
                 {/* Seleção de Modalidade */}
                 <div style={{ flex: '1 1 200px' }}>
